@@ -2,11 +2,11 @@
 
 
 a = Analysis(
-    ['C:\\Users\\Usuario\\Documents\\WisprLocal\\wispr\\__main__.py'],
+    ['C:\\Users\\Usuario\\Documents\\WhisperKey\\whisperkey\\__main__.py'],
     pathex=[],
     binaries=[],
     datas=[('assets', 'assets'), ('config.toml', '.')],
-    hiddenimports=['wispr.platform.windows', 'wispr.platform.linux', 'wispr.platform.macos', 'wispr.splash', 'wispr.settings_gui', 'wispr.onboarding', 'wispr.updater'],
+    hiddenimports=['whisperkey.platform.windows', 'whisperkey.platform.linux', 'whisperkey.platform.macos', 'whisperkey.splash', 'whisperkey.settings_gui', 'whisperkey.onboarding', 'whisperkey.updater'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -21,7 +21,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='WisprLocal',
+    name='WhisperKey',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -32,7 +32,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['C:\\Users\\Usuario\\Documents\\WisprLocal\\assets\\icons\\app.ico'],
+    icon=['C:\\Users\\Usuario\\Documents\\WhisperKey\\assets\\icons\\app.ico'],
 )
 coll = COLLECT(
     exe,
@@ -41,5 +41,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='WisprLocal',
+    name='WhisperKey',
 )

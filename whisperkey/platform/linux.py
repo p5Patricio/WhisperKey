@@ -8,7 +8,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from wispr.platform.base import BasePlatform
+from whisperkey.platform.base import BasePlatform
 
 log = logging.getLogger(__name__)
 
@@ -55,11 +55,11 @@ class LinuxPlatform(BasePlatform):
 
         lines = [
             "#!/bin/bash",
-            "# WisprLocal — Lanzador",
+            "# WhisperKey — Lanzador",
             "# Generado por install.py — no editar manualmente.",
             f"cd '{here}'",
-            f"nohup '{python}' -m wispr >/dev/null 2>&1 &",
-            "echo $! > wisprlocal.pid",
+            f"nohup '{python}' -m whisperkey >/dev/null 2>&1 &",
+            "echo $! > whisperkey.pid",
         ]
         content = "\n".join(lines) + "\n"
         run_sh.write_text(content, encoding="utf-8")
@@ -72,14 +72,14 @@ class LinuxPlatform(BasePlatform):
         python = self.get_venv_python()
         apps_dir = Path.home() / ".local" / "share" / "applications"
         apps_dir.mkdir(parents=True, exist_ok=True)
-        desktop_path = apps_dir / "wisprlocal.desktop"
+        desktop_path = apps_dir / "whisperkey.desktop"
 
         content = f"""\
 [Desktop Entry]
-Name=WisprLocal
+Name=WhisperKey
 Comment=Dictado por voz local con Whisper
-Exec={python} -m wispr
-Icon={here}/wispr/icon.png
+Exec={python} -m whisperkey
+Icon={here}/whisperkey/icon.png
 Type=Application
 Terminal=false
 Categories=Utility;AudioVideo;
@@ -88,7 +88,7 @@ Categories=Utility;AudioVideo;
         log.info("Archivo .desktop generado: %s", desktop_path)
 
     def _get_service_path(self) -> Path:
-        return Path.home() / ".config" / "systemd" / "user" / "wisprlocal.service"
+        return Path.home() / ".config" / "systemd" / "user" / "whisperkey.service"
 
     def setup_autostart(self) -> None:
         """Crear y habilitar servicio systemd de usuario."""
@@ -103,12 +103,12 @@ Categories=Utility;AudioVideo;
 
         service_content = f"""\
 [Unit]
-Description=WisprLocal
+Description=WhisperKey
 After=graphical-session.target
 
 [Service]
 Type=simple
-ExecStart={python} -m wispr
+ExecStart={python} -m whisperkey
 WorkingDirectory={here}
 Restart=on-failure
 
@@ -124,7 +124,7 @@ WantedBy=default.target
                 capture_output=True,
             )
             subprocess.run(
-                ["systemctl", "--user", "enable", "wisprlocal.service"],
+                ["systemctl", "--user", "enable", "whisperkey.service"],
                 check=True,
                 capture_output=True,
             )
@@ -138,7 +138,7 @@ WantedBy=default.target
         try:
             if service_path.exists():
                 subprocess.run(
-                    ["systemctl", "--user", "disable", "wisprlocal.service"],
+                    ["systemctl", "--user", "disable", "whisperkey.service"],
                     check=True,
                     capture_output=True,
                 )
@@ -159,7 +159,7 @@ WantedBy=default.target
             return False
         try:
             result = subprocess.run(
-                ["systemctl", "--user", "is-enabled", "wisprlocal.service"],
+                ["systemctl", "--user", "is-enabled", "whisperkey.service"],
                 capture_output=True,
                 text=True,
             )

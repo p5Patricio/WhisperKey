@@ -1,4 +1,4 @@
-"""Asistente de primer uso (onboarding wizard) para WisprLocal."""
+"""Asistente de primer uso (onboarding wizard) para WhisperKey."""
 
 from __future__ import annotations
 
@@ -17,9 +17,9 @@ import numpy as np
 import sounddevice as sd
 from pynput import keyboard as kb
 
-from wispr import config as config_module
-from wispr.platform import get_platform
-from wispr.sounds import play_ready
+from whisperkey import config as config_module
+from whisperkey.platform import get_platform
+from whisperkey.sounds import play_ready
 
 log = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ _STEP_TITLES = [
 
 
 class OnboardingWizard:
-    """Wizard de 5 pasos para configurar WisprLocal en el primer uso.
+    """Wizard de 5 pasos para configurar WhisperKey en el primer uso.
 
     Si *customtkinter* no está disponible, escribe ``first_run = false`` y retorna.
     """
@@ -52,7 +52,7 @@ class OnboardingWizard:
             return
 
         self._window = ctk.CTkToplevel(master)
-        self._window.title("Bienvenido a WisprLocal")
+        self._window.title("Bienvenido a WhisperKey")
         self._window.geometry("600x450")
         self._window.resizable(False, False)
         if master is not None:
@@ -112,7 +112,7 @@ class OnboardingWizard:
 
         self._btn_prev.configure(state="disabled" if idx == 0 else "normal")
         if idx == len(_STEP_TITLES) - 1:
-            self._btn_next.configure(text="Empezar a usar WisprLocal")
+            self._btn_next.configure(text="Empezar a usar WhisperKey")
         else:
             self._btn_next.configure(text="Siguiente")
 
@@ -157,7 +157,7 @@ class OnboardingWizard:
         assert ctk is not None
         ctk.CTkLabel(
             self._content,
-            text="Bienvenido a WisprLocal",
+            text="Bienvenido a WhisperKey",
             font=ctk.CTkFont(size=20, weight="bold"),
         ).pack(pady=20)
         ctk.CTkLabel(
@@ -313,13 +313,13 @@ class OnboardingWizard:
         assert ctk is not None
         ctk.CTkLabel(
             self._content,
-            text="¿Iniciar WisprLocal al encender el sistema?",
+            text="¿Iniciar WhisperKey al encender el sistema?",
             font=ctk.CTkFont(size=16, weight="bold"),
         ).pack(pady=10)
 
         ctk.CTkLabel(
             self._content,
-            text="WisprLocal puede iniciarse automáticamente cuando enciendas tu computadora.\n"
+            text="WhisperKey puede iniciarse automáticamente cuando enciendas tu computadora.\n"
                  "Esto asegura que siempre esté listo para dictar.",
             font=ctk.CTkFont(size=13),
             justify="center",
@@ -328,7 +328,7 @@ class OnboardingWizard:
         self._autostart_var = tk.BooleanVar(value=True)
         ctk.CTkCheckBox(
             self._content,
-            text="Sí, iniciar WisprLocal automáticamente",
+            text="Sí, iniciar WhisperKey automáticamente",
             variable=self._autostart_var,
             onvalue=True,
             offvalue=False,
@@ -351,7 +351,7 @@ class OnboardingWizard:
         assert ctk is not None
         ctk.CTkLabel(
             self._content,
-            text="¡Listo para usar WisprLocal!",
+            text="¡Listo para usar WhisperKey!",
             font=ctk.CTkFont(size=16, weight="bold"),
         ).pack(pady=10)
 

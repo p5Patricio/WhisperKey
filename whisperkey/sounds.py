@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import threading
 
-from wispr.platform import get_platform
+from whisperkey.platform import get_platform
 
 _platform = get_platform()
 

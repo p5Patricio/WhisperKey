@@ -7,8 +7,8 @@ import queue
 
 import sounddevice as sd
 
-from wispr.errors import AudioDeviceError
-from wispr.state import AppState
+from whisperkey.errors import AudioDeviceError
+from whisperkey.state import AppState
 
 log = logging.getLogger(__name__)
 

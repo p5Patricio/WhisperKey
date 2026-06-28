@@ -7,7 +7,7 @@ import platform as plat
 import subprocess
 from pathlib import Path
 
-from wispr.platform.base import BasePlatform
+from whisperkey.platform.base import BasePlatform
 
 log = logging.getLogger(__name__)
 
@@ -52,11 +52,11 @@ class MacPlatform(BasePlatform):
 
         lines = [
             "#!/bin/bash",
-            "# WisprLocal — Lanzador",
+            "# WhisperKey — Lanzador",
             "# Generado por install.py — no editar manualmente.",
             f"cd '{here}'",
-            f"nohup '{python}' -m wispr >/dev/null 2>&1 &",
-            "echo $! > wisprlocal.pid",
+            f"nohup '{python}' -m whisperkey >/dev/null 2>&1 &",
+            "echo $! > whisperkey.pid",
         ]
         content = "\n".join(lines) + "\n"
         run_sh.write_text(content, encoding="utf-8")
@@ -64,7 +64,7 @@ class MacPlatform(BasePlatform):
         log.info("run.sh generado en %s", run_sh)
 
     def _get_plist_path(self) -> Path:
-        return Path.home() / "Library" / "LaunchAgents" / "com.wisprlocal.plist"
+        return Path.home() / "Library" / "LaunchAgents" / "com.whisperkey.plist"
 
     def setup_autostart(self) -> None:
         """Crear y cargar LaunchAgent."""
@@ -81,12 +81,12 @@ class MacPlatform(BasePlatform):
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.wisprlocal</string>
+    <string>com.whisperkey</string>
     <key>ProgramArguments</key>
     <array>
         <string>{python}</string>
         <string>-m</string>
-        <string>wispr</string>
+        <string>whisperkey</string>
     </array>
     <key>WorkingDirectory</key>
     <string>{here}</string>

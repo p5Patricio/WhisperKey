@@ -12,7 +12,7 @@ from typing import Callable
 
 from PIL import Image, ImageDraw
 
-from wispr.state import AppState
+from whisperkey.state import AppState
 
 logger = logging.getLogger(__name__)
 
@@ -40,13 +40,13 @@ def _update_tray_icon(icon, state: AppState, config: dict | None = None) -> None
     ptt_key = config["hotkeys"]["ptt"] if config else "PTT"
     if state.get_loading():
         icon.icon = _load_icon("tray_loading.png", "yellow")
-        icon.title = "WisprLocal \u2014 Cargando modelo..."
+        icon.title = "WhisperKey \u2014 Cargando modelo..."
     elif state.model is not None:
         icon.icon = _load_icon("tray_ready.png", "green")
-        icon.title = f"WisprLocal \u2014 Listo | PTT: {ptt_key}"
+        icon.title = f"WhisperKey \u2014 Listo | PTT: {ptt_key}"
     else:
         icon.icon = _load_icon("tray_idle.png", "gray")
-        icon.title = "WisprLocal \u2014 Sin modelo (clic derecho para cargar)"
+        icon.title = "WhisperKey \u2014 Sin modelo (clic derecho para cargar)"
 
 
 def start_tray(
@@ -62,9 +62,9 @@ def start_tray(
     import pystray
 
     icon = pystray.Icon(
-        "Wispr",
+        "WhisperKey",
         _load_icon("tray_idle.png", "gray"),
-        "WisprLocal \u2014 Sin modelo (clic derecho para cargar)",
+        "WhisperKey \u2014 Sin modelo (clic derecho para cargar)",
     )
 
     def _load(_icon, _item):
@@ -83,7 +83,7 @@ def start_tray(
 
     def _open_settings() -> None:
         try:
-            from wispr.settings_gui import SettingsGUI
+            from whisperkey.settings_gui import SettingsGUI
             SettingsGUI(master=master, config=config)
         except Exception as exc:
             logger.warning("No se pudo abrir SettingsGUI: %s", exc)

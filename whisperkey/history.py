@@ -10,7 +10,7 @@ from typing import Any
 
 log = logging.getLogger(__name__)
 
-_HISTORY_DIR = pathlib.Path.home() / ".wisprlocal"
+_HISTORY_DIR = pathlib.Path.home() / ".whisperkey"
 _HISTORY_FILE = _HISTORY_DIR / "history.jsonl"
 _MAX_ENTRIES = 500
 

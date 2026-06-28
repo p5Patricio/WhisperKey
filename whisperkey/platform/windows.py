@@ -8,7 +8,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from wispr.platform.base import BasePlatform
+from whisperkey.platform.base import BasePlatform
 
 log = logging.getLogger(__name__)
 
@@ -60,11 +60,11 @@ class WindowsPlatform(BasePlatform):
             )
 
         lines = [
-            "' WisprLocal — Lanzador sin ventana de consola",
+            "' WhisperKey — Lanzador sin ventana de consola",
             "' Generado por install.py — no editar manualmente.",
             'Set WshShell = CreateObject("WScript.Shell")',
             f'WshShell.CurrentDirectory = "{here}"',
-            f'WshShell.Run """{pythonw}""" & " -m wispr", 0, False',
+            f'WshShell.Run """{pythonw}""" & " -m whisperkey", 0, False',
             "Set WshShell = Nothing",
         ]
         content = "\n".join(lines) + "\n"
@@ -79,7 +79,7 @@ class WindowsPlatform(BasePlatform):
             / "Start Menu"
             / "Programs"
             / "Startup"
-            / "WisprLocal.vbs"
+            / "WhisperKey.vbs"
         )
 
     def setup_autostart(self) -> None:
@@ -105,5 +105,5 @@ class WindowsPlatform(BasePlatform):
                 log.warning("No se pudo eliminar de Inicio automático: %s", exc)
 
     def is_autostart_enabled(self) -> bool:
-        """Retorna True si WisprLocal.vbs existe en el directorio de Startup."""
+        """Retorna True si WhisperKey.vbs existe en el directorio de Startup."""
         return self._get_startup_path().exists()

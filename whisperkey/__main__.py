@@ -1,4 +1,4 @@
-"""Composition root de WisprLocal."""
+"""Composition root de WhisperKey."""
 
 from __future__ import annotations
 
@@ -7,15 +7,15 @@ import pathlib
 import sys
 import threading
 
-from wispr import config as config_module
-from wispr import sounds
-from wispr.audio import start_stream, stop_stream
-from wispr.hotkeys import start_listener
-from wispr.injection import inject_text
-from wispr.overlay import RecordingOverlay
-from wispr.state import AppState
-from wispr.transcription import load_model, transcription_worker, unload_model
-from wispr.tray import start_tray
+from whisperkey import config as config_module
+from whisperkey import sounds
+from whisperkey.audio import start_stream, stop_stream
+from whisperkey.hotkeys import start_listener
+from whisperkey.injection import inject_text
+from whisperkey.overlay import RecordingOverlay
+from whisperkey.state import AppState
+from whisperkey.transcription import load_model, transcription_worker, unload_model
+from whisperkey.tray import start_tray
 
 log = logging.getLogger(__name__)
 
@@ -63,13 +63,13 @@ def main() -> None:
 
     if first_run and sys.platform == "darwin":
         log.warning(
-            "macOS: Para que WisprLocal funcione correctamente, concedé permisos de "
+            "macOS: Para que WhisperKey funcione correctamente, concedé permisos de "
             "Accesibilidad a la terminal/IDE desde la que se ejecuta "
             "(Preferencias del Sistema > Seguridad y Privacidad > Accesibilidad)."
         )
 
     log.info(
-        "WisprLocal iniciando... PTT: %s | Toggle: %s",
+        "WhisperKey iniciando... PTT: %s | Toggle: %s",
         config["hotkeys"]["ptt"],
         config["hotkeys"]["toggle"],
     )
@@ -79,7 +79,7 @@ def main() -> None:
     # ------------------------------------------------------------------
     if first_run:
         if _CTK_AVAILABLE:
-            from wispr.onboarding import OnboardingWizard
+            from whisperkey.onboarding import OnboardingWizard
 
             OnboardingWizard(master=root)
         else:
@@ -94,10 +94,10 @@ def main() -> None:
     # ------------------------------------------------------------------
     splash = None
     if _CTK_AVAILABLE:
-        from wispr.splash import SplashScreen
+        from whisperkey.splash import SplashScreen
 
         splash = SplashScreen(master=root)
-        splash.set_status("Inicializando WisprLocal...")
+        splash.set_status("Inicializando WhisperKey...")
 
     # 1. Transcription worker daemon
     worker = threading.Thread(
@@ -178,7 +178,7 @@ def main() -> None:
     except KeyboardInterrupt:
         stop_stream(stream)
 
-    log.info("WisprLocal finalizado.")
+    log.info("WhisperKey finalizado.")
 
 
 if __name__ == "__main__":

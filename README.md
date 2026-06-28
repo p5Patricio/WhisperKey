@@ -1,4 +1,4 @@
-# WisprLocal
+# WhisperKey
 
 Dictado por voz local, sin nube, bilingüe español/inglés. Apretás una tecla, hablás, y el texto aparece donde estés escribiendo. Usa OpenAI Whisper corriendo en tu GPU — tu voz nunca sale de tu computadora.
 
@@ -6,7 +6,7 @@ Dictado por voz local, sin nube, bilingüe español/inglés. Apretás una tecla,
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Status](https://img.shields.io/badge/status-Fase%203%20%E2%9C%85-brightgreen)
-![GitHub release](https://img.shields.io/github/v/release/p5Patricio/WisprLocal)
+![GitHub release](https://img.shields.io/github/v/release/p5Patricio/WhisperKey)
 
 ---
 
@@ -23,7 +23,7 @@ Dictado por voz local, sin nube, bilingüe español/inglés. Apretás una tecla,
 ## ⚡ Cómo funciona
 
 1. **Apretás F9** (o la tecla que configures) y hablás
-2. **Soltás F9** y WisprLocal transcribe tu voz a texto con Whisper
+2. **Soltás F9** y WhisperKey transcribe tu voz a texto con Whisper
 3. **El texto aparece** automáticamente donde estés escribiendo — Notion, VS Code, WhatsApp, el juego que sea
 
 No copiar y pegar. No cambiar de ventana. Apretás, hablás, soltás, y listo.
@@ -32,7 +32,7 @@ No copiar y pegar. No cambiar de ventana. Apretás, hablás, soltás, y listo.
 
 ## 🖥️ Dónde lo podés usar
 
-WisprLocal funciona con **cualquier aplicación de escritorio**:
+WhisperKey funciona con **cualquier aplicación de escritorio**:
 
 | Tipo | Apps compatibles |
 |------|-----------------|
@@ -54,16 +54,16 @@ WisprLocal funciona con **cualquier aplicación de escritorio**:
 
 ```powershell
 # 1. Clonar el repo
-git clone https://github.com/p5Patricio/WisprLocal.git
-cd WisprLocal
+git clone https://github.com/p5Patricio/WhisperKey.git
+cd WhisperKey
 
 # 2. Correr el instalador gráfico
 python installer/gui_installer.py
 
-# 3. Ejecutar WisprLocal (sin terminal)
+# 3. Ejecutar WhisperKey (sin terminal)
 # Opción A: Doble clic en lanzador.vbs
 # Opción B: Desde terminal:
-.venv\Scripts\pythonw.exe -m wispr
+.venv\Scripts\pythonw.exe -m whisperkey
 ```
 
 El instalador detecta tu GPU automáticamente y configura todo. En el primer uso te guía con un wizard paso a paso.
@@ -78,7 +78,7 @@ El instalador detecta tu GPU automáticamente y configura todo. En el primer uso
 | `medium` | ~5 GB | ~8 GB | Lento | Excelente |
 | `large-v3` | ~10 GB | ~16 GB | Muy lento | La mejor |
 
-> 💡 Con `name = "auto"`, WisprLocal detecta tu hardware y elige el mejor modelo que pueda correr.
+> 💡 Con `name = "auto"`, WhisperKey detecta tu hardware y elige el mejor modelo que pueda correr.
 
 ---
 
@@ -86,7 +86,7 @@ El instalador detecta tu GPU automáticamente y configura todo. En el primer uso
 
 ### Primer uso
 
-La primera vez que ejecutás WisprLocal aparece un **wizard de bienvenida** que te guía por:
+La primera vez que ejecutás WhisperKey aparece un **wizard de bienvenida** que te guía por:
 
 1. **Bienvenida** — presentación rápida
 2. **Hardware** — detecta tu GPU y RAM, sugiere modelo óptimo
@@ -131,7 +131,7 @@ Hacé clic derecho en el ícono de bandeja → **Configuración**. Se abre una v
 - **Historial** — lista de transcripciones previas con timestamp, copiar al clipboard, limpiar
 - **Sistema** — activar/desactivar inicio automático con Windows/Linux/macOS
 
-Los cambios se aplican al reiniciar WisprLocal.
+Los cambios se aplican al reiniciar WhisperKey.
 
 ---
 
@@ -146,7 +146,7 @@ Los cambios se aplican al reiniciar WisprLocal.
 
 ## ⚡ Comparativa
 
-| Característica | WisprLocal | Otter.ai | Whisper Desktop | Windows Voice Typing |
+| Característica | WhisperKey | Otter.ai | Whisper Desktop | Windows Voice Typing |
 |---------------|------------|----------|-----------------|---------------------|
 | **100% offline** | ✅ | ❌ | ✅ | ❌ |
 | **Spanglish técnico** | ✅ | ⚠️ | ✅ | ❌ |
@@ -175,7 +175,7 @@ Algunas apps elevadas (admin) bloquean la simulación de teclado. Probá en Note
 **El overlay no aparece**
 Verificá que esté habilitado en Configuración → Overlay. No funciona sobre juegos en fullscreen exclusivo de DirectX.
 
-**WisprLocal no aparece en la bandeja**
+**WhisperKey no aparece en la bandeja**
 Si ejecutaste con `python.exe` en vez de `pythonw.exe`, la terminal se cierra y mata el proceso. Usá `pythonw.exe` o hacé doble clic en `lanzador.vbs`.
 
 ---
@@ -183,7 +183,7 @@ Si ejecutaste con `python.exe` en vez de `pythonw.exe`, la terminal se cierra y 
 ## 🏗️ Arquitectura (para developers)
 
 ```
-wispr/
+whisperkey/
 ├── __main__.py      # composition root — init, threading y graceful shutdown
 ├── state.py         # AppState thread-safe compartido entre threads
 ├── config.py        # carga, validación y detección de hardware

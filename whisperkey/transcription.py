@@ -8,9 +8,9 @@ from typing import Callable
 import numpy as np
 from faster_whisper import WhisperModel
 
-from wispr.errors import ModelLoadError, TranscriptionError
-from wispr.history import add_entry, trim
-from wispr.state import AppState
+from whisperkey.errors import ModelLoadError, TranscriptionError
+from whisperkey.history import add_entry, trim
+from whisperkey.state import AppState
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ def load_model(state: AppState, config: dict, sounds, overlay=None) -> None:
     model_name = model_cfg["name"]
 
     if model_name == "auto":
-        from wispr.config import detect_optimal_model
+        from whisperkey.config import detect_optimal_model
 
         model_name = detect_optimal_model(config)
 

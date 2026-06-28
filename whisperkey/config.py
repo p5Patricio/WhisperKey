@@ -45,7 +45,7 @@ DEFAULTS = {
 }
 
 DEFAULT_TOML_CONTENT = """\
-# WisprLocal — Configuración
+# WhisperKey — Configuración
 # Editá este archivo para personalizar la herramienta.
 # Los cambios se aplican al reiniciar la aplicación.
 
@@ -176,7 +176,7 @@ def detect_optimal_model(config: dict) -> str:
         10-16 GB-> medium
         > 16 GB -> large-v3
     """
-    from wispr.platform import get_platform
+    from whisperkey.platform import get_platform
 
     platform = get_platform()
     device, _ = platform.detect_gpu()

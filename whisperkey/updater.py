@@ -15,7 +15,7 @@ except ImportError:  # pragma: no cover
 log = logging.getLogger(__name__)
 
 VERSION = "1.0.0"
-_REPO = "p5Patricio/WisprLocal"
+_REPO = "p5Patricio/WhisperKey"
 _API_URL = f"https://api.github.com/repos/{_REPO}/releases/latest"
 
 

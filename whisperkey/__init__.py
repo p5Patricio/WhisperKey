@@ -1,5 +1,5 @@
 """
-WisprLocal — Voice-to-Text local para Windows.
+WhisperKey — Voice-to-Text local para Windows.
 
 Paquete principal que contiene todos los módulos del sistema:
 - state: AppState dataclass con threading locks

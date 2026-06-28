@@ -1,4 +1,4 @@
-"""Ventana de configuración de WisprLocal via customtkinter."""
+"""Ventana de configuración de WhisperKey via customtkinter."""
 
 from __future__ import annotations
 
@@ -13,9 +13,9 @@ except ImportError:  # pragma: no cover
 
 from pynput import keyboard as kb
 
-from wispr import config as config_module
-from wispr.history import clear, get_entries
-from wispr.platform import get_platform
+from whisperkey import config as config_module
+from whisperkey.history import clear, get_entries
+from whisperkey.platform import get_platform
 
 log = logging.getLogger(__name__)
 
@@ -80,7 +80,7 @@ class SettingsGUI:
         self._master = master
 
         self._window = ctk.CTkToplevel(master)
-        self._window.title("Configuración de WisprLocal")
+        self._window.title("Configuración de WhisperKey")
         self._window.geometry("650x520")
         self._window.resizable(False, False)
         if master is not None:
@@ -260,7 +260,7 @@ class SettingsGUI:
         self._autostart_var = tk.BooleanVar(value=autostart_enabled)
         self._autostart_check = ctk.CTkCheckBox(
             tab,
-            text="Iniciar WisprLocal al encender el sistema",
+            text="Iniciar WhisperKey al encender el sistema",
             variable=self._autostart_var,
             onvalue=True,
             offvalue=False,

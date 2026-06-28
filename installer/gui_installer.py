@@ -1,4 +1,4 @@
-"""Instalador gráfico standalone para WisprLocal."""
+"""Instalador gráfico standalone para WhisperKey."""
 
 from __future__ import annotations
 
@@ -16,8 +16,8 @@ try:
 except ImportError:  # pragma: no cover
     ctk = None  # type: ignore[assignment]
 
-from wispr import config as config_module
-from wispr.platform import get_platform
+from whisperkey import config as config_module
+from whisperkey.platform import get_platform
 
 log = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ class InstallerWizard:
             self._root = ctk.CTk()
         else:
             self._root = tk.Tk()
-        self._root.title("Instalador de WisprLocal")
+        self._root.title("Instalador de WhisperKey")
         self._root.geometry("600x500")
         self._root.resizable(False, False)
 
@@ -176,10 +176,10 @@ class InstallerWizard:
     # ------------------------------------------------------------------
 
     def _build_step_welcome(self) -> None:
-        self._create_label(self._content, "Bienvenido al instalador de WisprLocal", font_size=18, bold=True).pack(pady=20)
+        self._create_label(self._content, "Bienvenido al instalador de WhisperKey", font_size=18, bold=True).pack(pady=20)
         self._create_label(
             self._content,
-            "Este asistente instalará WisprLocal en tu sistema.\n"
+            "Este asistente instalará WhisperKey en tu sistema.\n"
             "Se creará un entorno virtual, se instalarán las dependencias\n"
             "y se generará un lanzador para iniciar la aplicación.",
             font_size=13,
@@ -341,16 +341,16 @@ class InstallerWizard:
         self._create_label(self._content, "¡Instalación completada!", font_size=18, bold=True).pack(pady=20)
         self._create_label(
             self._content,
-            "WisprLocal está listo para usar.\n"
+            "WhisperKey está listo para usar.\n"
             "Podés iniciarlo desde el lanzador generado.",
             font_size=13,
         ).pack(pady=10)
 
         self._launch_var = tk.IntVar(value=1)
         if ctk is not None:
-            cb = ctk.CTkCheckBox(self._content, text="Lanzar WisprLocal ahora", variable=self._launch_var)
+            cb = ctk.CTkCheckBox(self._content, text="Lanzar WhisperKey ahora", variable=self._launch_var)
         else:
-            cb = tk.Checkbutton(self._content, text="Lanzar WisprLocal ahora", variable=self._launch_var)
+            cb = tk.Checkbutton(self._content, text="Lanzar WhisperKey ahora", variable=self._launch_var)
         cb.pack(pady=15)
 
         # Guardar referencia para usar al cerrar
@@ -367,7 +367,7 @@ class InstallerWizard:
         platform = get_platform()
         python = platform.get_venv_python()
         project_root = platform.get_project_root()
-        subprocess.Popen([str(python), "-m", "wispr"], cwd=str(project_root))
+        subprocess.Popen([str(python), "-m", "whisperkey"], cwd=str(project_root))
 
 
 def main() -> None:

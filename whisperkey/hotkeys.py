@@ -7,7 +7,7 @@ import os
 
 from pynput import keyboard as kb
 
-from wispr.state import AppState
+from whisperkey.state import AppState
 
 logger = logging.getLogger(__name__)
 

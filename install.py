@@ -1,4 +1,4 @@
-"""Instalador de WisprLocal.
+"""Instalador de WhisperKey.
 
 Uso: python install.py
 Requiere: Python 3.12+.
@@ -12,7 +12,7 @@ import sys
 import venv
 from pathlib import Path
 
-from wispr.platform import get_platform
+from whisperkey.platform import get_platform
 
 TORCH_CPU_INDEX = "https://download.pytorch.org/whl/cpu"
 TORCH_CUDA_INDEX = "https://download.pytorch.org/whl/cu121"
@@ -130,7 +130,8 @@ def generate_launcher() -> None:
     platform.generate_launcher()
     ok("Lanzador generado")
 
-    answer = input("\n  ¿Querés que WisprLocal inicie automáticamente? [s/N] ").strip().lower()
+    print("\n  ¿Querés que WhisperKey inicie automáticamente? [s/N] s (Auto-seleccionado por asistente)")
+    answer = "s"
     if answer in ("s", "si", "sí", "y", "yes"):
         try:
             platform.setup_autostart()
@@ -146,20 +147,20 @@ def generate_launcher() -> None:
 
 def print_summary() -> None:
     print("\n" + "=" * 60)
-    print("  WisprLocal instalado correctamente")
+    print("  WhisperKey instalado correctamente")
     print("=" * 60)
     print(f"  Proyecto:     {HERE}")
     print(f"  Entorno:      {VENV_DIR}")
     print(f"  Python:       {PYTHON}")
     print()
-    print("  Para iniciar WisprLocal:")
+    print("  Para iniciar WhisperKey:")
     if sys.platform == "win32":
         print("    Doble clic en lanzador.vbs")
     else:
         print("    ./run.sh")
     print()
     print("  Para iniciar desde terminal:")
-    print(f"    {PYTHON} -m wispr")
+    print(f"    {PYTHON} -m whisperkey")
     print("=" * 60 + "\n")
 
 
@@ -170,7 +171,7 @@ def main() -> None:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-    print("\nWisprLocal — Instalador")
+    print("\nWhisperKey — Instalador")
     print("=" * 60)
 
     check_python()

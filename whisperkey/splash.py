@@ -1,4 +1,4 @@
-"""Splash screen de carga para WisprLocal."""
+"""Splash screen de carga para WhisperKey."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ class SplashScreen:
             return
 
         self._window = ctk.CTkToplevel(master)
-        self._window.title("WisprLocal — Cargando...")
+        self._window.title("WhisperKey — Cargando...")
         self._window.geometry("400x200")
         self._window.resizable(False, False)
         self._window.overrideredirect(True)

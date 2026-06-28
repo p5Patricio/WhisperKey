@@ -8,8 +8,8 @@ import time
 import pyperclip
 from pynput import keyboard
 
-from wispr.errors import InjectionError
-from wispr.platform import get_platform
+from whisperkey.errors import InjectionError
+from whisperkey.platform import get_platform
 
 log = logging.getLogger(__name__)
 _CLIPBOARD_SIZE_LIMIT = 5 * 1024 * 1024
