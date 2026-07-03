@@ -154,7 +154,7 @@ def main() -> None:
         state.shutdown_event.set()
         stop_stream(stream)
         listener.stop()
-        state.audio_queue.put(None)
+        state.put_sentinel()
         worker.join(timeout=5)
         if worker.is_alive():
             log.warning("transcription_worker no terminó en 5s")

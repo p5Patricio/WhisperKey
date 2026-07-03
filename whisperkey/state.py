@@ -109,3 +109,14 @@ class AppState:
             self.audio_queue.put_nowait("RESET")
         except queue.Full:
             pass
+
+    def put_sentinel(self) -> None:
+        """Pone un sentinel None en la cola de forma no bloqueante, liberando espacio si está llena."""
+        try:
+            self.audio_queue.put_nowait(None)
+        except queue.Full:
+            try:
+                self.audio_queue.get_nowait()
+                self.audio_queue.put_nowait(None)
+            except queue.Empty:
+                pass

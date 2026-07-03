@@ -91,7 +91,7 @@ def start_listener(
                 overlay.show_toggle()
                 logger.info("Toggle ON")
             else:
-                state.audio_queue.put(None)
+                state.put_sentinel()
                 sounds.play_stop()
                 overlay.hide()
                 logger.info("Toggle OFF")
@@ -114,7 +114,7 @@ def start_listener(
         # — PTT: fin push-to-talk —
         if key == ptt_key and state.get_ptt():
             state.set_ptt(False)
-            state.audio_queue.put(None)
+            state.put_sentinel()
             sounds.play_stop()
             overlay.hide()
 
