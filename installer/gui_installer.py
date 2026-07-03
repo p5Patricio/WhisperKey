@@ -347,7 +347,7 @@ class InstallerWizard:
         python = self._get_venv_python()
 
         if device == "cuda":
-            cmd = [str(python), "-m", "pip", "install", "torch", "torchaudio", "--index-url", "https://download.pytorch.org/whl/cu118"]
+            cmd = [str(python), "-m", "pip", "install", "torch", "torchaudio", "--index-url", "https://download.pytorch.org/whl/cu121"]
         elif device == "mps":
             cmd = [str(python), "-m", "pip", "install", "torch", "torchaudio"]
         else:
