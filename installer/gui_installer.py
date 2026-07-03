@@ -306,23 +306,27 @@ class InstallerWizard:
     def _run_install(self) -> None:
         """Ejecuta la instalación en segundo plano."""
         try:
-            self._set_progress_safe(0.1)
+            self._set_progress_safe(0.05)
             self._log("Creando entorno virtual...")
             self._create_venv()
 
-            self._set_progress_safe(0.3)
-            self._log("Instalando PyTorch...")
-            self._install_torch()
-
-            self._set_progress_safe(0.6)
-            self._log("Instalando dependencias...")
+            self._set_progress_safe(0.15)
+            self._log("Instalando dependencias de Python...")
             self._install_requirements()
 
-            self._set_progress_safe(0.8)
+            self._set_progress_safe(0.30)
+            self._log("Descargando e instalando binarios de whisper.cpp...")
+            self._install_binaries()
+
+            self._set_progress_safe(0.60)
+            self._log("Descargando modelo GGML...")
+            self._install_model()
+
+            self._set_progress_safe(0.85)
             self._log("Generando configuración...")
             self._write_config()
 
-            self._set_progress_safe(0.9)
+            self._set_progress_safe(0.95)
             self._log("Generando lanzador...")
             platform = get_platform()
             platform.generate_launcher()
@@ -341,24 +345,96 @@ class InstallerWizard:
         if not venv_path.exists():
             subprocess.run([sys.executable, "-m", "venv", str(venv_path)], check=True)
 
-    def _install_torch(self) -> None:
+    def _download_file(self, url: str, dest_path: pathlib.Path, step_progress_start: float, step_progress_end: float) -> None:
+        import requests
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        self._log(f"Descargando {url.split('/')[-1]}...")
+        
+        response = requests.get(url, stream=True)
+        response.raise_for_status()
+        total_length = response.headers.get('content-length')
+        
+        if total_length is None:
+            with open(dest_path, 'wb') as f:
+                f.write(response.content)
+            self._set_progress_safe(step_progress_end)
+        else:
+            total_length = int(total_length)
+            downloaded = 0
+            with open(dest_path, 'wb') as f:
+                for data in response.iter_content(chunk_size=4096):
+                    downloaded += len(data)
+                    f.write(data)
+                    pct = downloaded / total_length
+                    current_progress = step_progress_start + pct * (step_progress_end - step_progress_start)
+                    self._set_progress_safe(current_progress)
+
+    def _install_binaries(self) -> None:
         platform = get_platform()
         device, _ = platform.detect_gpu()
-        python = self._get_venv_python()
-
+        
+        project_root = platform.get_project_root()
+        bin_dir = project_root / "assets" / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        
+        url_cuda = "https://github.com/ggerganov/whisper.cpp/releases/download/v1.5.4/whisper-cublas-12.2.0-bin-x64.zip"
+        url_cpu = "https://github.com/ggerganov/whisper.cpp/releases/download/v1.5.4/whisper-1.5.4-bin-x64.zip"
+        
+        import tempfile
+        import zipfile
+        
+        temp_zip = pathlib.Path(tempfile.gettempdir()) / "whisper_bin.zip"
+        success = False
+        
         if device == "cuda":
-            cmd = [str(python), "-m", "pip", "install", "torch", "torchaudio", "--index-url", "https://download.pytorch.org/whl/cu121"]
-        elif device == "mps":
-            cmd = [str(python), "-m", "pip", "install", "torch", "torchaudio"]
-        else:
-            cmd = [str(python), "-m", "pip", "install", "torch", "torchaudio", "--index-url", "https://download.pytorch.org/whl/cpu"]
-        subprocess.run(cmd, check=True)
+            self._log("Dispositivo CUDA detectado. Descargando binarios whisper.cpp con CUDA...")
+            try:
+                self._download_file(url_cuda, temp_zip, 0.30, 0.50)
+                self._log("Extrayendo binarios CUDA...")
+                with zipfile.ZipFile(temp_zip, 'r') as zip_ref:
+                    zip_ref.extractall(bin_dir)
+                success = True
+            except Exception as exc:
+                self._log(f"Error descargando binarios CUDA: {exc}. Intentando fallback a CPU...")
+                if temp_zip.exists():
+                    try:
+                        temp_zip.unlink()
+                    except Exception:
+                        pass
+        
+        if not success:
+            self._log("Descargando binarios CPU (AVX2)...")
+            self._download_file(url_cpu, temp_zip, 0.30, 0.50)
+            self._log("Extrayendo binarios CPU...")
+            with zipfile.ZipFile(temp_zip, 'r') as zip_ref:
+                zip_ref.extractall(bin_dir)
+                
+        if temp_zip.exists():
+            try:
+                temp_zip.unlink()
+            except Exception:
+                pass
+        self._log("Binarios de whisper.cpp listados e instalados en assets/bin/.")
 
     def _install_requirements(self) -> None:
         python = self._get_venv_python()
         req_file = pathlib.Path(__file__).parent.parent / "requirements.txt"
         if req_file.exists():
             subprocess.run([str(python), "-m", "pip", "install", "-r", str(req_file)], check=True)
+
+    def _install_model(self) -> None:
+        models_dir = pathlib.Path.home() / ".whisperkey" / "models"
+        models_dir.mkdir(parents=True, exist_ok=True)
+        dest_file = models_dir / "ggml-tiny.bin"
+        
+        if dest_file.exists():
+            self._log("El modelo ggml-tiny.bin ya está descargado.")
+            self._set_progress_safe(0.60)
+            return
+            
+        url = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin"
+        self._log("Descargando modelo ggml-tiny.bin...")
+        self._download_file(url, dest_file, 0.50, 0.80)
 
     def _write_config(self) -> None:
         config_dict = {

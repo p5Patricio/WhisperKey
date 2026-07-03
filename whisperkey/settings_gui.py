@@ -197,7 +197,7 @@ class SettingsGUI:
 
     def _update_model_info(self, _=None) -> None:
         model_name = _MODEL_DISPLAY_TO_CFG.get(self._model_combo.get(), "auto")
-        device_name = _DEVICE_DISPLAY_TO_CFG.get(self._device_combo.get(), "auto")
+        device_name, _ = get_platform().detect_gpu()
 
         temp_config = {
             "model": {
@@ -228,7 +228,7 @@ class SettingsGUI:
         )
 
     def _build_model_tab(self) -> None:
-        """Pestaña Modelo: name, device, compute_type."""
+        """Pestaña Modelo: name."""
         assert ctk is not None
         tab = self._tabview.tab("Modelo")
         model_cfg = self._config.get("model", {})
@@ -238,32 +238,22 @@ class SettingsGUI:
         self._model_combo.set(_MODEL_CFG_TO_DISPLAY.get(model_cfg.get("name", "auto"), _MODEL_CFG_TO_DISPLAY["auto"]))
         self._model_combo.grid(row=0, column=1, padx=10, pady=10)
 
-        ctk.CTkLabel(tab, text="Dispositivo:").grid(row=1, column=0, padx=10, pady=10, sticky="w")
-        self._device_combo = ctk.CTkComboBox(tab, values=_DEVICE_OPTIONS_DISPLAY, width=320, command=self._update_model_info)
-        self._device_combo.set(_DEVICE_CFG_TO_DISPLAY.get(model_cfg.get("device", "cuda"), _DEVICE_CFG_TO_DISPLAY["cuda"]))
-        self._device_combo.grid(row=1, column=1, padx=10, pady=10)
-
-        ctk.CTkLabel(tab, text="Tipo de cómputo:").grid(row=2, column=0, padx=10, pady=10, sticky="w")
-        self._compute_combo = ctk.CTkComboBox(tab, values=_COMPUTE_OPTIONS_DISPLAY, width=320, command=self._update_model_info)
-        self._compute_combo.set(_COMPUTE_CFG_TO_DISPLAY.get(model_cfg.get("compute_type", "int8_float16"), _COMPUTE_CFG_TO_DISPLAY["int8_float16"]))
-        self._compute_combo.grid(row=2, column=1, padx=10, pady=10)
-
         self._model_info_lbl = ctk.CTkLabel(
             tab,
             text="",
             font=ctk.CTkFont(size=12, weight="bold"),
             justify="left",
         )
-        self._model_info_lbl.grid(row=3, column=0, columnspan=2, padx=10, pady=15, sticky="w")
+        self._model_info_lbl.grid(row=1, column=0, columnspan=2, padx=10, pady=15, sticky="w")
         self._update_model_info()
 
         self._download_progress_lbl = ctk.CTkLabel(tab, text="", font=ctk.CTkFont(size=11))
-        self._download_progress_lbl.grid(row=4, column=0, columnspan=2, padx=10, pady=2, sticky="w")
+        self._download_progress_lbl.grid(row=2, column=0, columnspan=2, padx=10, pady=2, sticky="w")
         self._download_progress_lbl.grid_remove()
 
         self._download_progress_bar = ctk.CTkProgressBar(tab, width=320)
         self._download_progress_bar.set(0.0)
-        self._download_progress_bar.grid(row=5, column=0, columnspan=2, padx=10, pady=2, sticky="w")
+        self._download_progress_bar.grid(row=3, column=0, columnspan=2, padx=10, pady=2, sticky="w")
         self._download_progress_bar.grid_remove()
 
     def _build_audio_tab(self) -> None:
@@ -455,8 +445,8 @@ class SettingsGUI:
         assert ctk is not None
         try:
             model_name = _MODEL_DISPLAY_TO_CFG.get(self._model_combo.get(), "auto")
-            device_name = _DEVICE_DISPLAY_TO_CFG.get(self._device_combo.get(), "auto")
-            compute_type = _COMPUTE_DISPLAY_TO_CFG.get(self._compute_combo.get(), "int8_float16")
+            device_name = self._config.get("model", {}).get("device", "cuda")
+            compute_type = self._config.get("model", {}).get("compute_type", "int8_float16")
 
             selected_audio_device = self._device_audio_combo.get()
             audio_device_val = "" if selected_audio_device == "Predeterminado del sistema" else selected_audio_device

@@ -14,9 +14,10 @@ DEFAULTS = {
         "first_run": True,
     },
     "model": {
-        "name": "auto",
+        "name": "tiny",
         "device": "cuda",
         "compute_type": "int8_float16",
+        "use_cpu_fallback": False,
     },
     "audio": {
         "sample_rate": 16000,
@@ -52,13 +53,9 @@ DEFAULT_TOML_CONTENT = """\
 
 [model]
 # Modelo de Whisper a usar. Opciones: tiny, base, small, medium, large-v2, large-v3
-# "auto" = detectar automáticamente según tu hardware
-name = "auto"
-# Dispositivo de cómputo. Opciones: "cuda" (GPU NVIDIA), "cpu", "mps" (Apple Silicon macOS)
-device = "cuda"
-# Tipo de cómputo. Opciones: "float16", "int8_float16", "int8"
-# float16 = máxima calidad, int8_float16 = balance calidad/VRAM, int8 = mínima VRAM
-compute_type = "int8_float16"
+name = "tiny"
+# Si falla la ejecución con GPU/CUDA, se descargará y usará automáticamente la versión de CPU
+use_cpu_fallback = false
 
 [audio]
 # Frecuencia de muestreo en Hz. No cambiar salvo que tengas problemas de audio.
@@ -124,15 +121,6 @@ def _deep_merge(base: dict, override: dict) -> dict:
 
 def _validate(config: dict) -> None:
     """Raise ValueError on invalid config values."""
-    valid_devices = ("cuda", "cpu", "mps")
-    if config["model"]["device"] not in valid_devices:
-        raise ValueError(
-            f"model.device debe ser uno de {valid_devices}, se recibió: '{config['model']['device']}'"
-        )
-
-    valid_compute = ("float16", "int8_float16", "int8", "float32")
-    if config["model"]["compute_type"] not in valid_compute:
-        raise ValueError(f"model.compute_type debe ser uno de {valid_compute}")
 
     valid_positions = ("bottom-right", "bottom-left", "top-right", "top-left")
     if config["overlay"]["position"] not in valid_positions:
@@ -180,28 +168,38 @@ def detect_optimal_model(config: dict) -> str:
         > 16 GB -> large-v3
     """
     from whisperkey.platform import get_platform
+    import subprocess
+    import shutil
 
     platform = get_platform()
     device, _ = platform.detect_gpu()
 
     try:
         import psutil
-        import torch
 
-        if device == "cuda" and torch.cuda.is_available():
-            total_bytes = torch.cuda.get_device_properties(0).total_memory
-            total_gb = total_bytes / (1024 ** 3)
-            log.info("VRAM detectada: %.1f GB", total_gb)
+        total_gb = 8.0  # default safe fallback
+        if device == "cuda":
+            nvidia_smi = shutil.which("nvidia-smi")
+            if nvidia_smi is not None:
+                try:
+                    res = subprocess.run(
+                        [nvidia_smi, "--query-gpu=memory.total", "--format=csv,noheader,nounits"],
+                        capture_output=True,
+                        text=True,
+                        timeout=5
+                    )
+                    if res.returncode == 0:
+                        total_gb = float(res.stdout.strip()) / 1024.0
+                        log.info("VRAM detectada via nvidia-smi: %.1f GB", total_gb)
+                except Exception:
+                    pass
         else:
             total_bytes = psutil.virtual_memory().total
             total_gb = total_bytes / (1024 ** 3)
-            if device == "mps":
-                log.info("RAM detectada: %.1f GB (MPS unified memory)", total_gb)
-            else:
-                log.info("RAM detectada: %.1f GB (CPU)", total_gb)
+            log.info("RAM detectada: %.1f GB (CPU)", total_gb)
     except Exception as exc:
-        log.warning("No se pudo detectar memoria: %s. Usando 'base'.", exc)
-        return "base"
+        log.warning("No se pudo detectar memoria: %s. Usando 'tiny'.", exc)
+        return "tiny"
 
     if total_gb < 4:
         return "tiny"
@@ -291,11 +289,9 @@ def load_config(path: str = "config.toml") -> dict:
 
 
 def is_model_downloaded(model_name: str) -> bool:
-    """Verifica si los archivos del modelo ya están descargados en el caché de Hugging Face."""
+    """Verifica si los archivos del modelo ya están descargados en ~/.whisperkey/models/."""
     if model_name == "auto":
-        return False
-    # Hugging Face cache dir
-    cache_dir = pathlib.Path.home() / ".cache" / "huggingface" / "hub"
-    folder_name = f"models--Systran--faster-whisper-{model_name}"
-    model_path = cache_dir / folder_name
-    return model_path.exists()
+        model_name = "tiny"
+    models_dir = pathlib.Path.home() / ".whisperkey" / "models"
+    model_file = models_dir / f"ggml-{model_name}.bin"
+    return model_file.exists()
