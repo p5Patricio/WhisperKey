@@ -89,3 +89,23 @@ class AppState:
         gc.collect()
         torch.cuda.empty_cache()
         torch.cuda.synchronize()
+
+    def reset_recording(self) -> None:
+        """Restablece los flags de grabación y vacía la cola de audio.
+
+        Envía un string sentinel 'RESET' a la cola para limpiar el buffer del worker.
+        """
+        with self.lock:
+            self.ptt_active = False
+            self.toggle_active = False
+        
+        while not self.audio_queue.empty():
+            try:
+                self.audio_queue.get_nowait()
+            except queue.Empty:
+                break
+        
+        try:
+            self.audio_queue.put_nowait("RESET")
+        except queue.Full:
+            pass

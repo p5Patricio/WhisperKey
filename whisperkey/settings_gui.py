@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import logging
+import os
 import tkinter as tk
 from typing import Callable
+from PIL import Image
 
 try:
     import customtkinter as ctk
@@ -13,15 +15,62 @@ except ImportError:  # pragma: no cover
 
 from pynput import keyboard as kb
 
+import queue
+import threading
+import numpy as np
+import sounddevice as sd
+
 from whisperkey import config as config_module
 from whisperkey.history import clear, get_entries
 from whisperkey.platform import get_platform
 
 log = logging.getLogger(__name__)
 
-_MODEL_OPTIONS = ["auto", "tiny", "base", "small", "medium", "large-v3"]
-_DEVICE_OPTIONS = ["auto", "cuda", "cpu", "mps"]
-_COMPUTE_OPTIONS = ["float16", "int8_float16", "int8", "float32"]
+_MODEL_OPTIONS_DISPLAY = [
+    "Automático (Detección automática)",
+    "Tiny (Muy rápido, ~1GB VRAM)",
+    "Base (Rápido, ~1GB VRAM)",
+    "Small (Recomendado, ~2GB VRAM)",
+    "Medium (Preciso, ~5GB VRAM)",
+    "Large-v3 (Máxima calidad, ~10GB VRAM)"
+]
+_MODEL_DISPLAY_TO_CFG = {
+    "Automático (Detección automática)": "auto",
+    "Tiny (Muy rápido, ~1GB VRAM)": "tiny",
+    "Base (Rápido, ~1GB VRAM)": "base",
+    "Small (Recomendado, ~2GB VRAM)": "small",
+    "Medium (Preciso, ~5GB VRAM)": "medium",
+    "Large-v3 (Máxima calidad, ~10GB VRAM)": "large-v3"
+}
+_MODEL_CFG_TO_DISPLAY = {v: k for k, v in _MODEL_DISPLAY_TO_CFG.items()}
+
+_DEVICE_OPTIONS_DISPLAY = [
+    "Automático (Detección automática)",
+    "CUDA (GPU NVIDIA - Recomendado)",
+    "CPU (Procesador - Lento)",
+    "MPS (Apple Silicon macOS)"
+]
+_DEVICE_DISPLAY_TO_CFG = {
+    "Automático (Detección automática)": "auto",
+    "CUDA (GPU NVIDIA - Recomendado)": "cuda",
+    "CPU (Procesador - Lento)": "cpu",
+    "MPS (Apple Silicon macOS)": "mps"
+}
+_DEVICE_CFG_TO_DISPLAY = {v: k for k, v in _DEVICE_DISPLAY_TO_CFG.items()}
+
+_COMPUTE_OPTIONS_DISPLAY = [
+    "float16 (Máxima calidad - GPU potente)",
+    "int8_float16 (Balanceado - Recomendado)",
+    "int8 (Baja VRAM)",
+    "float32 (Solo CPU / Depuración)"
+]
+_COMPUTE_DISPLAY_TO_CFG = {
+    "float16 (Máxima calidad - GPU potente)": "float16",
+    "int8_float16 (Balanceado - Recomendado)": "int8_float16",
+    "int8 (Baja VRAM)": "int8",
+    "float32 (Solo CPU / Depuración)": "float32"
+}
+_COMPUTE_CFG_TO_DISPLAY = {v: k for k, v in _COMPUTE_DISPLAY_TO_CFG.items()}
 _POSITION_OPTIONS = ["bottom-right", "bottom-left", "top-right", "top-left"]
 
 
@@ -78,6 +127,8 @@ class SettingsGUI:
 
         self._config = config or config_module.load_config()
         self._master = master
+        self._mic_test_thread = None
+        self._stop_mic_test_event = threading.Event()
 
         self._window = ctk.CTkToplevel(master)
         self._window.title("Configuración de WhisperKey")
@@ -86,12 +137,42 @@ class SettingsGUI:
         if master is not None:
             self._window.transient(master)
 
+        self._window.protocol("WM_DELETE_WINDOW", self._on_close)
+
         self._build_ui()
+
+        # Registrar callback de progreso de descarga
+        try:
+            from whisperkey.transcription import CustomProgressBar
+            CustomProgressBar.register(self._on_download_progress)
+        except ImportError:
+            pass
 
     def _build_ui(self) -> None:
         """Construye la interfaz con tabs y botones."""
         assert ctk is not None
-        self._tabview = ctk.CTkTabview(self._window, width=610, height=420)
+
+        # Mostrar el logo en la parte superior si existe
+        logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "logo.png")
+        has_logo = False
+        if os.path.exists(logo_path):
+            try:
+                logo_image = ctk.CTkImage(
+                    light_image=Image.open(logo_path),
+                    dark_image=Image.open(logo_path),
+                    size=(60, 60)
+                )
+                self._logo_label = ctk.CTkLabel(self._window, text="", image=logo_image)
+                self._logo_label.pack(pady=(15, 0))
+                has_logo = True
+            except Exception as e:
+                log.warning("No se pudo cargar el logo en configuración: %s", e)
+
+        if has_logo:
+            self._window.geometry("650x585")
+            self._tabview = ctk.CTkTabview(self._window, width=610, height=410, command=self._on_tab_change)
+        else:
+            self._tabview = ctk.CTkTabview(self._window, width=610, height=420, command=self._on_tab_change)
         self._tabview.pack(pady=10, padx=20, fill="both", expand=True)
 
         self._tabview.add("Modelo")
@@ -111,8 +192,40 @@ class SettingsGUI:
         btn_frame = ctk.CTkFrame(self._window, fg_color="transparent")
         btn_frame.pack(pady=10)
 
-        ctk.CTkButton(btn_frame, text="Guardar", command=self._on_save, width=120).pack(side="left", padx=10)
-        ctk.CTkButton(btn_frame, text="Cancelar", command=self._on_cancel, width=120).pack(side="left", padx=10)
+        ctk.CTkButton(btn_frame, text="Guardar", command=self._on_save, width=120, fg_color="#2F855A", hover_color="#22543D").pack(side="left", padx=10)
+        ctk.CTkButton(btn_frame, text="Cancelar", command=self._on_cancel, width=120, fg_color="#4A5568", hover_color="#2D3748").pack(side="left", padx=10)
+
+    def _update_model_info(self, _=None) -> None:
+        model_name = _MODEL_DISPLAY_TO_CFG.get(self._model_combo.get(), "auto")
+        device_name = _DEVICE_DISPLAY_TO_CFG.get(self._device_combo.get(), "auto")
+
+        temp_config = {
+            "model": {
+                "name": model_name,
+                "device": device_name,
+            }
+        }
+
+        if model_name == "auto":
+            from whisperkey.config import detect_optimal_model
+            resolved = detect_optimal_model(temp_config)
+            resolved_text = f"Automático (Detectado: {resolved.upper()})"
+        else:
+            resolved = model_name
+            resolved_text = model_name.upper()
+
+        downloaded = config_module.is_model_downloaded(resolved)
+        if downloaded:
+            status_text = "Descargado y listo"
+            status_color = "#38A169"  # Green
+        else:
+            status_text = "Requiere descarga (se descargará al arrancar la app)"
+            status_color = "#DD6B20"  # Orange
+
+        self._model_info_lbl.configure(
+            text=f"Modelo activo: {resolved_text}\nEstado: {status_text}",
+            text_color=status_color
+        )
 
     def _build_model_tab(self) -> None:
         """Pestaña Modelo: name, device, compute_type."""
@@ -121,22 +234,40 @@ class SettingsGUI:
         model_cfg = self._config.get("model", {})
 
         ctk.CTkLabel(tab, text="Modelo Whisper:").grid(row=0, column=0, padx=10, pady=10, sticky="w")
-        self._model_combo = ctk.CTkComboBox(tab, values=_MODEL_OPTIONS, width=200)
-        self._model_combo.set(model_cfg.get("name", "auto"))
+        self._model_combo = ctk.CTkComboBox(tab, values=_MODEL_OPTIONS_DISPLAY, width=320, command=self._update_model_info)
+        self._model_combo.set(_MODEL_CFG_TO_DISPLAY.get(model_cfg.get("name", "auto"), _MODEL_CFG_TO_DISPLAY["auto"]))
         self._model_combo.grid(row=0, column=1, padx=10, pady=10)
 
         ctk.CTkLabel(tab, text="Dispositivo:").grid(row=1, column=0, padx=10, pady=10, sticky="w")
-        self._device_combo = ctk.CTkComboBox(tab, values=_DEVICE_OPTIONS, width=200)
-        self._device_combo.set(model_cfg.get("device", "cuda"))
+        self._device_combo = ctk.CTkComboBox(tab, values=_DEVICE_OPTIONS_DISPLAY, width=320, command=self._update_model_info)
+        self._device_combo.set(_DEVICE_CFG_TO_DISPLAY.get(model_cfg.get("device", "cuda"), _DEVICE_CFG_TO_DISPLAY["cuda"]))
         self._device_combo.grid(row=1, column=1, padx=10, pady=10)
 
         ctk.CTkLabel(tab, text="Tipo de cómputo:").grid(row=2, column=0, padx=10, pady=10, sticky="w")
-        self._compute_combo = ctk.CTkComboBox(tab, values=_COMPUTE_OPTIONS, width=200)
-        self._compute_combo.set(model_cfg.get("compute_type", "int8_float16"))
+        self._compute_combo = ctk.CTkComboBox(tab, values=_COMPUTE_OPTIONS_DISPLAY, width=320, command=self._update_model_info)
+        self._compute_combo.set(_COMPUTE_CFG_TO_DISPLAY.get(model_cfg.get("compute_type", "int8_float16"), _COMPUTE_CFG_TO_DISPLAY["int8_float16"]))
         self._compute_combo.grid(row=2, column=1, padx=10, pady=10)
 
+        self._model_info_lbl = ctk.CTkLabel(
+            tab,
+            text="",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            justify="left",
+        )
+        self._model_info_lbl.grid(row=3, column=0, columnspan=2, padx=10, pady=15, sticky="w")
+        self._update_model_info()
+
+        self._download_progress_lbl = ctk.CTkLabel(tab, text="", font=ctk.CTkFont(size=11))
+        self._download_progress_lbl.grid(row=4, column=0, columnspan=2, padx=10, pady=2, sticky="w")
+        self._download_progress_lbl.grid_remove()
+
+        self._download_progress_bar = ctk.CTkProgressBar(tab, width=320)
+        self._download_progress_bar.set(0.0)
+        self._download_progress_bar.grid(row=5, column=0, columnspan=2, padx=10, pady=2, sticky="w")
+        self._download_progress_bar.grid_remove()
+
     def _build_audio_tab(self) -> None:
-        """Pestaña Audio: sample_rate, channels, queue_maxsize."""
+        """Pestaña Audio: sample_rate, channels, queue_maxsize, device, notification_sounds."""
         assert ctk is not None
         tab = self._tabview.tab("Audio")
         audio_cfg = self._config.get("audio", {})
@@ -155,6 +286,40 @@ class SettingsGUI:
         self._queue_maxsize = ctk.CTkEntry(tab, width=120)
         self._queue_maxsize.insert(0, str(audio_cfg.get("queue_maxsize", 100)))
         self._queue_maxsize.grid(row=2, column=1, padx=10, pady=10)
+
+        ctk.CTkLabel(tab, text="Micrófono:").grid(row=3, column=0, padx=10, pady=10, sticky="w")
+
+        try:
+            import sounddevice as sd
+            devices = sd.query_devices()
+            input_devices = ["Predeterminado del sistema"]
+            for dev in devices:
+                if dev["max_input_channels"] > 0:
+                    name = dev["name"]
+                    if name not in input_devices:
+                        input_devices.append(name)
+        except Exception:
+            input_devices = ["Predeterminado del sistema"]
+
+        self._device_audio_combo = ctk.CTkComboBox(tab, values=input_devices, width=320)
+        current_device = audio_cfg.get("device", "")
+        if current_device and current_device in input_devices:
+            self._device_audio_combo.set(current_device)
+        else:
+            self._device_audio_combo.set("Predeterminado del sistema")
+        self._device_audio_combo.grid(row=3, column=1, padx=10, pady=10, columnspan=2, sticky="w")
+
+        self._sounds_enabled = ctk.CTkCheckBox(tab, text="Habilitar sonidos de notificación")
+        if audio_cfg.get("notification_sounds", True):
+            self._sounds_enabled.select()
+        self._sounds_enabled.grid(row=4, column=0, columnspan=2, padx=10, pady=10, sticky="w")
+
+        self._mic_test_btn = ctk.CTkButton(tab, text="Probar micrófono", command=self._toggle_mic_test, width=150)
+        self._mic_test_btn.grid(row=5, column=0, padx=10, pady=10, sticky="w")
+
+        self._mic_level_bar = ctk.CTkProgressBar(tab, width=280)
+        self._mic_level_bar.set(0.0)
+        self._mic_level_bar.grid(row=5, column=1, padx=10, pady=10, sticky="w")
 
     def _build_hotkeys_tab(self) -> None:
         """Pestaña Hotkeys: ptt, toggle, load_model_key + captura."""
@@ -289,16 +454,25 @@ class SettingsGUI:
         """Persiste la configuración y muestra aviso de reinicio."""
         assert ctk is not None
         try:
+            model_name = _MODEL_DISPLAY_TO_CFG.get(self._model_combo.get(), "auto")
+            device_name = _DEVICE_DISPLAY_TO_CFG.get(self._device_combo.get(), "auto")
+            compute_type = _COMPUTE_DISPLAY_TO_CFG.get(self._compute_combo.get(), "int8_float16")
+
+            selected_audio_device = self._device_audio_combo.get()
+            audio_device_val = "" if selected_audio_device == "Predeterminado del sistema" else selected_audio_device
+
             new_config = {
                 "model": {
-                    "name": self._model_combo.get(),
-                    "device": self._device_combo.get(),
-                    "compute_type": self._compute_combo.get(),
+                    "name": model_name,
+                    "device": device_name,
+                    "compute_type": compute_type,
                 },
                 "audio": {
                     "sample_rate": int(self._sample_rate.get()),
                     "channels": int(self._channels.get()),
                     "queue_maxsize": int(self._queue_maxsize.get()),
+                    "device": audio_device_val,
+                    "notification_sounds": bool(self._sounds_enabled.get()),
                 },
                 "hotkeys": {
                     "ptt": self._ptt_entry.get(),
@@ -313,6 +487,10 @@ class SettingsGUI:
                 },
             }
             config_module.write_config("config.toml", new_config)
+
+            # Sincronizar estado de sonido inmediatamente
+            from whisperkey import sounds
+            sounds.set_enabled(bool(self._sounds_enabled.get()))
 
             # Manejar inicio automático
             platform = get_platform()
@@ -344,5 +522,101 @@ class SettingsGUI:
 
     def _on_cancel(self) -> None:
         """Cierra la ventana sin guardar."""
+        self._on_close()
+
+    def _on_close(self) -> None:
+        try:
+            from whisperkey.transcription import CustomProgressBar
+            CustomProgressBar.unregister(self._on_download_progress)
+        except ImportError:
+            pass
+        self._stop_mic_test()
         if self._window is not None:
             self._window.destroy()
+
+    def _on_tab_change(self) -> None:
+        if self._tabview.get() != "Audio":
+            self._stop_mic_test()
+
+    def _on_download_progress(self, n: int, total: int, pct: float) -> None:
+        if self._window is not None and self._window.winfo_exists():
+            self._window.after(0, lambda: self._update_progress_ui(n, total, pct))
+
+    def _update_progress_ui(self, n: int, total: int, pct: float) -> None:
+        if self._tabview.get() == "Modelo":
+            self._download_progress_bar.grid()
+            self._download_progress_lbl.grid()
+            self._download_progress_bar.set(pct / 100.0)
+            self._download_progress_lbl.configure(text=f"Descargando modelo: {pct:.1f}% ({n}/{total} bytes)")
+            if pct >= 100.0:
+                self._window.after(2000, self._hide_download_progress)
+
+    def _hide_download_progress(self) -> None:
+        if self._window is not None and self._window.winfo_exists():
+            self._download_progress_bar.grid_remove()
+            self._download_progress_lbl.grid_remove()
+
+    def _toggle_mic_test(self) -> None:
+        if self._mic_test_thread is not None and self._mic_test_thread.is_alive():
+            self._stop_mic_test()
+        else:
+            self._start_mic_test()
+
+    def _start_mic_test(self) -> None:
+        self._stop_mic_test_event.clear()
+        self._mic_test_btn.configure(text="Detener Prueba")
+        self._mic_test_thread = threading.Thread(target=self._run_mic_test, daemon=True)
+        self._mic_test_thread.start()
+
+    def _stop_mic_test(self) -> None:
+        self._stop_mic_test_event.set()
+        if self._mic_test_thread is not None:
+            self._mic_test_thread = None
+        if self._window is not None and self._window.winfo_exists():
+            self._mic_test_btn.configure(text="Probar micrófono")
+            self._mic_level_bar.set(0.0)
+
+    def _run_mic_test(self) -> None:
+        try:
+            import time
+            duration = 3.0
+            samplerate = 16000
+            channels = 1
+            q = queue.Queue()
+
+            def callback(indata, frames, time_info, status):
+                if not self._stop_mic_test_event.is_set():
+                    q.put(indata.copy())
+
+            # Resolve selected mic
+            selected_mic = self._device_audio_combo.get()
+            device_id = None
+            if selected_mic != "Predeterminado del sistema":
+                try:
+                    devices = sd.query_devices()
+                    for idx, dev in enumerate(devices):
+                        if dev["max_input_channels"] > 0 and selected_mic in dev["name"]:
+                            device_id = idx
+                            break
+                except Exception:
+                    pass
+
+            with sd.InputStream(device=device_id, samplerate=samplerate, channels=channels, callback=callback):
+                start = time.time()
+                while time.time() - start < duration and not self._stop_mic_test_event.is_set():
+                    try:
+                        data = q.get(timeout=0.1)
+                        peak = float(np.max(np.abs(data)))
+                        if self._window is not None and self._window.winfo_exists():
+                            self._window.after(0, lambda v=peak: self._mic_level_bar.set(min(v, 1.0)))
+                    except queue.Empty:
+                        continue
+
+            if not self._stop_mic_test_event.is_set():
+                if self._window is not None and self._window.winfo_exists():
+                    self._window.after(0, self._stop_mic_test)
+
+        except Exception as exc:
+            log.warning("Error en test de micrófono de configuración: %s", exc)
+            if self._window is not None and self._window.winfo_exists():
+                self._window.after(0, self._stop_mic_test)

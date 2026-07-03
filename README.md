@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" alt="WhisperKey Logo" width="150">
+</p>
+
 # WhisperKey
 
 Dictado por voz local, sin nube, bilingüe español/inglés. Apretás una tecla, hablás, y el texto aparece donde estés escribiendo. Usa OpenAI Whisper corriendo en tu GPU — tu voz nunca sale de tu computadora.

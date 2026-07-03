@@ -66,18 +66,24 @@ def show_update_dialog(
         log.warning("customtkinter no disponible; no se puede mostrar diálogo de actualización")
         return
 
+    import sys
+
     dialog = ctk.CTkToplevel(root)
-    dialog.title("Actualización disponible")
-    dialog.geometry("450x350")
+    dialog.title("Actualización obligatoria disponible")
+    dialog.geometry("450x300")
     dialog.resizable(False, False)
+    
+    # Prevenir cerrar la ventana usando la 'X'
+    dialog.protocol("WM_DELETE_WINDOW", lambda: None)
+
     if root is not None:
         dialog.transient(root)
         dialog.grab_set()
 
-    ctk.CTkLabel(dialog, text=f"Nueva versión: {version}", font=ctk.CTkFont(size=16, weight="bold")).pack(pady=(15, 5))
+    ctk.CTkLabel(dialog, text=f"Nueva versión obligatoria: {version}", font=ctk.CTkFont(size=16, weight="bold")).pack(pady=(15, 5))
     ctk.CTkLabel(dialog, text=f"Versión actual: {VERSION}", font=ctk.CTkFont(size=12)).pack(pady=2)
 
-    textbox = ctk.CTkTextbox(dialog, width=400, height=150)
+    textbox = ctk.CTkTextbox(dialog, width=400, height=120)
     textbox.pack(padx=10, pady=10)
     textbox.insert("0.0", changelog or "Sin notas de release.")
     textbox.configure(state="disabled")
@@ -88,6 +94,6 @@ def show_update_dialog(
     def _download() -> None:
         webbrowser.open(url)
         dialog.destroy()
+        sys.exit(0)
 
-    ctk.CTkButton(btn_frame, text="Descargar", command=_download, width=120).pack(side="left", padx=10)
-    ctk.CTkButton(btn_frame, text="Más tarde", command=dialog.destroy, width=120).pack(side="left", padx=10)
+    ctk.CTkButton(btn_frame, text="Descargar", command=_download, width=200).pack(pady=5)

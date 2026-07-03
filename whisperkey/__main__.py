@@ -61,6 +61,8 @@ def main() -> None:
         log.error("Configuración inválida: %s", exc)
         sys.exit(1)
 
+    sounds.set_enabled(config["audio"].get("notification_sounds", True))
+
     if first_run and sys.platform == "darwin":
         log.warning(
             "macOS: Para que WhisperKey funcione correctamente, concedé permisos de "
@@ -84,6 +86,21 @@ def main() -> None:
             OnboardingWizard(master=root)
         else:
             config_module.write_config(str(config_path), {"first_run": False})
+
+    # ------------------------------------------------------------------
+    # Chequeo de actualizaciones asincrónico
+    # ------------------------------------------------------------------
+    def _run_updater_check():
+        try:
+            from whisperkey.updater import check_update, show_update_dialog
+            is_newer, version, url, changelog = check_update()
+            if is_newer:
+                log.info("Nueva versión disponible: %s", version)
+                root.after(0, lambda: show_update_dialog(root, version, url, changelog))
+        except Exception as exc:
+            log.warning("No se pudo verificar actualizaciones: %s", exc)
+
+    threading.Thread(target=_run_updater_check, daemon=True).start()
 
     queue_maxsize = config["audio"].get("queue_maxsize", 100)
     state = AppState(audio_queue_maxsize=queue_maxsize)
@@ -126,7 +143,7 @@ def main() -> None:
     loader.start()
 
     # 3. Audio stream — siempre activo
-    stream = start_stream(state, config)
+    stream = start_stream(state, config, overlay)
 
     # 4. Keyboard listener
     listener = start_listener(state, config, overlay, sounds)

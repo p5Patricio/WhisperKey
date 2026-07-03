@@ -21,9 +21,51 @@ from whisperkey.platform import get_platform
 
 log = logging.getLogger(__name__)
 
-_MODEL_OPTIONS = ["tiny", "base", "small", "medium", "large-v3"]
-_DEVICE_OPTIONS = ["auto", "cuda", "cpu", "mps"]
-_COMPUTE_OPTIONS = ["float16", "int8_float16", "int8", "float32"]
+_MODEL_OPTIONS_DISPLAY = [
+    "Automático (Detección automática)",
+    "Tiny (Muy rápido, ~1GB VRAM)",
+    "Base (Rápido, ~1GB VRAM)",
+    "Small (Recomendado, ~2GB VRAM)",
+    "Medium (Preciso, ~5GB VRAM)",
+    "Large-v3 (Máxima calidad, ~10GB VRAM)"
+]
+_MODEL_DISPLAY_TO_CFG = {
+    "Automático (Detección automática)": "auto",
+    "Tiny (Muy rápido, ~1GB VRAM)": "tiny",
+    "Base (Rápido, ~1GB VRAM)": "base",
+    "Small (Recomendado, ~2GB VRAM)": "small",
+    "Medium (Preciso, ~5GB VRAM)": "medium",
+    "Large-v3 (Máxima calidad, ~10GB VRAM)": "large-v3"
+}
+_MODEL_CFG_TO_DISPLAY = {v: k for k, v in _MODEL_DISPLAY_TO_CFG.items()}
+
+_DEVICE_OPTIONS_DISPLAY = [
+    "Automático (Detección automática)",
+    "CUDA (GPU NVIDIA - Recomendado)",
+    "CPU (Procesador - Lento)",
+    "MPS (Apple Silicon macOS)"
+]
+_DEVICE_DISPLAY_TO_CFG = {
+    "Automático (Detección automática)": "auto",
+    "CUDA (GPU NVIDIA - Recomendado)": "cuda",
+    "CPU (Procesador - Lento)": "cpu",
+    "MPS (Apple Silicon macOS)": "mps"
+}
+_DEVICE_CFG_TO_DISPLAY = {v: k for k, v in _DEVICE_DISPLAY_TO_CFG.items()}
+
+_COMPUTE_OPTIONS_DISPLAY = [
+    "float16 (Máxima calidad - GPU potente)",
+    "int8_float16 (Balanceado - Recomendado)",
+    "int8 (Baja VRAM)",
+    "float32 (Solo CPU / Depuración)"
+]
+_COMPUTE_DISPLAY_TO_CFG = {
+    "float16 (Máxima calidad - GPU potente)": "float16",
+    "int8_float16 (Balanceado - Recomendado)": "int8_float16",
+    "int8 (Baja VRAM)": "int8",
+    "float32 (Solo CPU / Depuración)": "float32"
+}
+_COMPUTE_CFG_TO_DISPLAY = {v: k for k, v in _COMPUTE_DISPLAY_TO_CFG.items()}
 
 
 class InstallerWizard:
@@ -67,6 +109,10 @@ class InstallerWizard:
 
         self._show_step(0)
         self._root.mainloop()
+
+    def _auto_finish_and_launch(self) -> None:
+        self._launch_app()
+        self._root.destroy()
 
     # ------------------------------------------------------------------
     # Helpers de widgets compatibles
@@ -132,7 +178,7 @@ class InstallerWizard:
 
     def _show_step(self, idx: int) -> None:
         self._current_step = idx
-        titles = ["Bienvenido", "Hardware", "Modelo", "Instalación", "Finalizado"]
+        titles = ["Bienvenido", "Hardware", "Modelo", "Instalación"]
         self._header.configure(text=titles[idx])
         self._step_label.configure(text=f"Paso {idx + 1} de {len(titles)}")
 
@@ -147,22 +193,21 @@ class InstallerWizard:
             self._build_step_model()
         elif idx == 3:
             self._build_step_install()
-        elif idx == 4:
-            self._build_step_done()
 
         self._btn_prev.configure(state="disabled" if idx == 0 else "normal")
-        if idx == 4:
-            self._btn_next.configure(text="Cerrar")
+        if idx == 3:
+            self._btn_next.configure(text="Cerrar", state="disabled")
         else:
             self._btn_next.configure(text="Siguiente")
 
     def _next_step(self) -> None:
-        if self._current_step == 4:
-            self._root.destroy()
-        elif self._current_step == 3:
-            # No avanzar durante instalación activa
-            if self._install_thread is not None and self._install_thread.is_alive():
-                return
+        if self._current_step == 3:
+            self._auto_finish_and_launch()
+        elif self._current_step == 2:
+            # BUG FIX: read values from dropdowns before moving to progress
+            self._selected_model = _MODEL_DISPLAY_TO_CFG.get(self._model_combo.get(), "base")
+            self._selected_device = _DEVICE_DISPLAY_TO_CFG.get(self._device_combo.get(), "auto")
+            self._selected_compute = _COMPUTE_DISPLAY_TO_CFG.get(self._compute_combo.get(), "int8_float16")
             self._show_step(self._current_step + 1)
         else:
             self._show_step(self._current_step + 1)
@@ -221,18 +266,18 @@ class InstallerWizard:
         self._create_label(self._content, "Configuración del modelo", font_size=16, bold=True).pack(pady=10)
 
         self._create_label(self._content, "Modelo Whisper:").pack(pady=(10, 2))
-        self._model_combo = self._create_combo(self._content, _MODEL_OPTIONS, width=200)
-        self._model_combo.set(self._selected_model)
+        self._model_combo = self._create_combo(self._content, _MODEL_OPTIONS_DISPLAY, width=320)
+        self._model_combo.set(_MODEL_CFG_TO_DISPLAY.get(self._selected_model, _MODEL_CFG_TO_DISPLAY["base"]))
         self._model_combo.pack(pady=2)
 
         self._create_label(self._content, "Dispositivo:").pack(pady=(10, 2))
-        self._device_combo = self._create_combo(self._content, _DEVICE_OPTIONS, width=200)
-        self._device_combo.set(self._selected_device)
+        self._device_combo = self._create_combo(self._content, _DEVICE_OPTIONS_DISPLAY, width=320)
+        self._device_combo.set(_DEVICE_CFG_TO_DISPLAY.get(self._selected_device, _DEVICE_CFG_TO_DISPLAY["auto"]))
         self._device_combo.pack(pady=2)
 
         self._create_label(self._content, "Tipo de cómputo:").pack(pady=(10, 2))
-        self._compute_combo = self._create_combo(self._content, _COMPUTE_OPTIONS, width=200)
-        self._compute_combo.set(self._selected_compute)
+        self._compute_combo = self._create_combo(self._content, _COMPUTE_OPTIONS_DISPLAY, width=320)
+        self._compute_combo.set(_COMPUTE_CFG_TO_DISPLAY.get(self._selected_compute, _COMPUTE_CFG_TO_DISPLAY["int8_float16"]))
         self._compute_combo.pack(pady=2)
 
     # ------------------------------------------------------------------
@@ -283,8 +328,8 @@ class InstallerWizard:
             platform.generate_launcher()
 
             self._set_progress_safe(1.0)
-            self._log("¡Instalación completada!")
-            self._root.after(0, lambda: self._btn_next.configure(state="normal"))
+            self._log("¡Instalación completada! Abriendo WhisperKey...")
+            self._root.after(1500, self._auto_finish_and_launch)
         except Exception as exc:
             log.exception("Error durante la instalación")
             self._log(f"ERROR: {exc}")

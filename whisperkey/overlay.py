@@ -20,10 +20,10 @@ log = logging.getLogger(__name__)
 
 # Estados visuales del overlay — paleta alineada con dark theme de customtkinter
 STATES: dict[str, dict | None] = {
-    "ptt":     {"text": "\u2b24  REC PTT",    "bg": "#EF4444", "fg": "white"},
-    "toggle":  {"text": "\u2b24  REC",         "bg": "#F97316", "fg": "white"},
-    "loading": {"text": "\u23f3 Cargando...", "bg": "#6B7280", "fg": "white"},
-    "error":   {"text": "",                    "bg": "#DC2626", "fg": "white"},
+    "ptt":     {"text": "\u2b24  Escuchando...", "bg": "#EF4444", "fg": "white"},
+    "toggle":  {"text": "\u2b24  Grabando...",   "bg": "#F97316", "fg": "white"},
+    "loading": {"text": "\u23f3 Cargando...",   "bg": "#6B7280", "fg": "white"},
+    "error":   {"text": "\u274c  Error",        "bg": "#DC2626", "fg": "white"},
     "hidden":  None,
 }
 

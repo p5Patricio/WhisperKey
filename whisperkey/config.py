@@ -23,6 +23,7 @@ DEFAULTS = {
         "channels": 1,
         "dtype": "float32",
         "queue_maxsize": 100,
+        "notification_sounds": True,
     },
     "hotkeys": {
         "ptt": "caps_lock",
@@ -68,6 +69,8 @@ channels = 1
 dtype = "float32"
 # Tamaño máximo de la cola de audio; los chunks más viejos se descartan cuando se llena
 queue_maxsize = 100
+# Sonidos de notificación para inicio/parada/errores/listo
+notification_sounds = true
 
 [hotkeys]
 # Tecla para Push-to-Talk (mantener presionada mientras hablás)
@@ -285,3 +288,14 @@ def load_config(path: str = "config.toml") -> dict:
     config = _deep_merge(DEFAULTS, user_config)
     _validate(config)
     return config
+
+
+def is_model_downloaded(model_name: str) -> bool:
+    """Verifica si los archivos del modelo ya están descargados en el caché de Hugging Face."""
+    if model_name == "auto":
+        return False
+    # Hugging Face cache dir
+    cache_dir = pathlib.Path.home() / ".cache" / "huggingface" / "hub"
+    folder_name = f"models--Systran--faster-whisper-{model_name}"
+    model_path = cache_dir / folder_name
+    return model_path.exists()

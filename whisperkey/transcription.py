@@ -8,11 +8,51 @@ from typing import Callable
 import numpy as np
 from faster_whisper import WhisperModel
 
+logger = logging.getLogger(__name__)
+
 from whisperkey.errors import ModelLoadError, TranscriptionError
 from whisperkey.history import add_entry, trim
 from whisperkey.state import AppState
 
-logger = logging.getLogger(__name__)
+from tqdm import tqdm
+
+class CustomProgressBar(tqdm):
+    _callbacks: list[Callable[[int, int, float], None]] = []
+
+    @classmethod
+    def register(cls, cb: Callable[[int, int, float], None]) -> None:
+        if cb not in cls._callbacks:
+            cls._callbacks.append(cb)
+
+    @classmethod
+    def unregister(cls, cb: Callable[[int, int, float], None] | None = None) -> None:
+        if cb is None:
+            cls._callbacks.clear()
+        elif cb in cls._callbacks:
+            cls._callbacks.remove(cb)
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._notify()
+
+    def update(self, n: int = 1) -> bool | None:
+        ret = super().update(n)
+        self._notify()
+        return ret
+
+    def close(self) -> None:
+        super().close()
+        self._notify()
+
+    def _notify(self) -> None:
+        total = self.total if self.total else 0
+        n = self.n if self.n else 0
+        pct = (n / total * 100) if total > 0 else 0
+        for cb in list(self._callbacks):
+            try:
+                cb(n, total, pct)
+            except Exception as e:
+                logger.warning("Error in CustomProgressBar callback: %s", e)
 
 
 def load_model(state: AppState, config: dict, sounds, overlay=None) -> None:
@@ -32,6 +72,24 @@ def load_model(state: AppState, config: dict, sounds, overlay=None) -> None:
         from whisperkey.config import detect_optimal_model
 
         model_name = detect_optimal_model(config)
+
+    from whisperkey.config import is_model_downloaded
+    if not is_model_downloaded(model_name):
+        logger.info("El modelo %s no está descargado. Iniciando descarga interceptada...", model_name)
+        if overlay is not None:
+            overlay.show_loading()
+        try:
+            import huggingface_hub
+            huggingface_hub.snapshot_download(
+                "Systran/faster-whisper-" + model_name,
+                tqdm_class=CustomProgressBar
+            )
+        except Exception as exc:
+            logger.exception("Error al descargar el modelo %s", model_name)
+            state.set_loading(False)
+            if overlay is not None:
+                overlay.show_error(f"Error de descarga: {exc}")
+            raise ModelLoadError(f"Error al descargar el modelo {model_name}: {exc}") from exc
 
     logger.info("Cargando modelo %s en %s...", model_name, model_cfg["device"])
 
@@ -135,6 +193,9 @@ def transcription_worker(
                         injection_fn(text)
                         add_entry(text)
                         trim()
+            buffer = []
+        elif isinstance(chunk, str) and chunk == "RESET":
+            logger.info("Recibida señal de RESET: vaciando buffer de transcripción sin procesar.")
             buffer = []
         else:
             buffer.append(chunk)

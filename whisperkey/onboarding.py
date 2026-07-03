@@ -7,6 +7,7 @@ import queue
 import threading
 import tkinter as tk
 from pathlib import Path
+from PIL import Image
 
 try:
     import customtkinter as ctk
@@ -145,6 +146,22 @@ class OnboardingWizard:
             if "app" not in cfg:
                 cfg["app"] = {}
             cfg["app"]["first_run"] = False
+
+            if "hotkeys" not in cfg:
+                cfg["hotkeys"] = {}
+            cfg["hotkeys"]["ptt"] = self._captured_ptt_key
+
+            if "audio" not in cfg:
+                cfg["audio"] = {}
+            selected_mic = getattr(self, "_mic_combo", None)
+            if selected_mic is not None:
+                selected_val = selected_mic.get()
+                cfg["audio"]["device"] = "" if selected_val == "Predeterminado del sistema" else selected_val
+
+            sounds_var = getattr(self, "_sounds_var", None)
+            if sounds_var is not None:
+                cfg["audio"]["notification_sounds"] = sounds_var.get()
+
             config_module.write_config(str(config_path), cfg)
         except Exception as exc:
             log.warning("No se pudo marcar first_run como false: %s", exc)
@@ -155,6 +172,19 @@ class OnboardingWizard:
 
     def _build_step_welcome(self) -> None:
         assert ctk is not None
+        import os
+        logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "logo.png")
+        if os.path.exists(logo_path):
+            try:
+                logo_image = ctk.CTkImage(
+                    light_image=Image.open(logo_path),
+                    dark_image=Image.open(logo_path),
+                    size=(100, 100)
+                )
+                ctk.CTkLabel(self._content, text="", image=logo_image).pack(pady=(10, 0))
+            except Exception as e:
+                log.warning("No se pudo cargar el logo en onboarding: %s", e)
+
         ctk.CTkLabel(
             self._content,
             text="Bienvenido a WhisperKey",
@@ -206,9 +236,27 @@ class OnboardingWizard:
         self._mic_status = ctk.CTkLabel(self._content, text="Presioná el botón para probar tu micrófono", font=ctk.CTkFont(size=13))
         self._mic_status.pack(pady=10)
 
+        # Selector de micrófono
+        try:
+            import sounddevice as sd
+            devices = sd.query_devices()
+            input_devices = ["Predeterminado del sistema"]
+            for dev in devices:
+                if dev["max_input_channels"] > 0:
+                    name = dev["name"]
+                    if name not in input_devices:
+                        input_devices.append(name)
+        except Exception:
+            input_devices = ["Predeterminado del sistema"]
+
+        ctk.CTkLabel(self._content, text="Seleccionar micrófono:", font=ctk.CTkFont(size=12)).pack(pady=(10, 2))
+        self._mic_combo = ctk.CTkComboBox(self._content, values=input_devices, width=320)
+        self._mic_combo.set("Predeterminado del sistema")
+        self._mic_combo.pack(pady=2)
+
         self._volume_bar = ctk.CTkProgressBar(self._content, width=300)
         self._volume_bar.set(0)
-        self._volume_bar.pack(pady=10)
+        self._volume_bar.pack(pady=15)
 
         self._mic_btn = ctk.CTkButton(self._content, text="Probar micrófono (3s)", command=self._start_mic_test)
         self._mic_btn.pack(pady=10)
@@ -234,7 +282,20 @@ class OnboardingWizard:
                 if not self._stop_recording.is_set():
                     q.put(indata.copy())
 
-            with sd.InputStream(samplerate=samplerate, channels=channels, callback=callback):
+            # Resolver dispositivo seleccionado
+            selected_mic = self._mic_combo.get()
+            device_id = None
+            if selected_mic != "Predeterminado del sistema":
+                try:
+                    devices = sd.query_devices()
+                    for idx, dev in enumerate(devices):
+                        if dev["max_input_channels"] > 0 and selected_mic in dev["name"]:
+                            device_id = idx
+                            break
+                except Exception:
+                    pass
+
+            with sd.InputStream(device=device_id, samplerate=samplerate, channels=channels, callback=callback):
                 import time
                 start = time.time()
                 while time.time() - start < duration and not self._stop_recording.is_set():
@@ -313,26 +374,34 @@ class OnboardingWizard:
         assert ctk is not None
         ctk.CTkLabel(
             self._content,
-            text="¿Iniciar WhisperKey al encender el sistema?",
+            text="Preferencias de la aplicación",
             font=ctk.CTkFont(size=16, weight="bold"),
-        ).pack(pady=10)
+        ).pack(pady=5)
 
         ctk.CTkLabel(
             self._content,
-            text="WhisperKey puede iniciarse automáticamente cuando enciendas tu computadora.\n"
-                 "Esto asegura que siempre esté listo para dictar.",
+            text="Configurá las opciones iniciales del sistema y audio.",
             font=ctk.CTkFont(size=13),
             justify="center",
-        ).pack(pady=10)
+        ).pack(pady=5)
 
         self._autostart_var = tk.BooleanVar(value=True)
         ctk.CTkCheckBox(
             self._content,
-            text="Sí, iniciar WhisperKey automáticamente",
+            text="Iniciar WhisperKey automáticamente al encender el equipo",
             variable=self._autostart_var,
             onvalue=True,
             offvalue=False,
-        ).pack(pady=20)
+        ).pack(pady=10)
+
+        self._sounds_var = tk.BooleanVar(value=True)
+        ctk.CTkCheckBox(
+            self._content,
+            text="Habilitar sonidos de notificación",
+            variable=self._sounds_var,
+            onvalue=True,
+            offvalue=False,
+        ).pack(pady=10)
 
     def _apply_autostart(self) -> None:
         """Aplica la preferencia de inicio automático si el usuario la seleccionó."""
