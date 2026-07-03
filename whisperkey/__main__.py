@@ -29,12 +29,12 @@ except ImportError:  # pragma: no cover
 
 def main() -> None:
     # Ocultar consola en Windows cuando corre desde terminal normal
-    if sys.platform == "win32":
-        try:
-            import ctypes
-            ctypes.windll.kernel32.FreeConsole()
-        except Exception:
-            pass
+    # if sys.platform == "win32":
+    #     try:
+    #         import ctypes
+    #         ctypes.windll.kernel32.FreeConsole()
+    #     except Exception:
+    #         pass
 
     logging.basicConfig(
         level=logging.INFO,

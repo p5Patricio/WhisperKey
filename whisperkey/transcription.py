@@ -152,9 +152,16 @@ def transcription_worker(
         chunk = state.audio_queue.get()
         if chunk is None:
             # Sentinel: procesar buffer acumulado
-            if buffer and state.model is not None:
+            logger.info("Recibida señal de parada (sentinel None). Tamaño del buffer: %d chunks", len(buffer))
+            if not buffer:
+                logger.warning("No hay audio acumulado para transcribir (buffer vacío).")
+            elif state.model is None:
+                logger.error("No se puede transcribir: el modelo de Whisper no está cargado.")
+            else:
                 audio_np = np.concatenate(buffer, axis=0).flatten()
-                if len(audio_np) >= min_frames:
+                if len(audio_np) < min_frames:
+                    logger.warning("Audio demasiado corto (%d muestras, mínimo requerido: %d). Ignorando transcripción.", len(audio_np), min_frames)
+                else:
                     # Normalizar
                     peak = np.max(np.abs(audio_np))
                     if peak > 0:
@@ -191,10 +198,12 @@ def transcription_worker(
 
                     text = "".join(seg.text for seg in segments).strip()
                     if text:
-                        logger.info("Transcripción: %s", text)
+                        logger.info("Transcripción exitosa: %s", text)
                         injection_fn(text)
                         add_entry(text)
                         trim()
+                    else:
+                        logger.warning("Transcripción final vacía (no se reconoció voz).")
             buffer = []
         elif isinstance(chunk, str) and chunk == "RESET":
             logger.info("Recibida señal de RESET: vaciando buffer de transcripción sin procesar.")
