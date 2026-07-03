@@ -161,7 +161,7 @@ def transcription_worker(
                         audio_np = audio_np / peak
 
                     try:
-                        segments, _ = state.model.transcribe(
+                        segments_gen, _ = state.model.transcribe(
                             audio_np,
                             language=language,
                             task="transcribe",
@@ -170,16 +170,18 @@ def transcription_worker(
                             vad_filter=True,
                             vad_parameters=vad_parameters,
                         )
+                        segments = list(segments_gen)
                     except Exception as exc:
                         logger.warning("VAD falló (%s), reintentando sin VAD...", exc)
                         try:
-                            segments, _ = state.model.transcribe(
+                            segments_gen, _ = state.model.transcribe(
                                 audio_np,
                                 language=language,
                                 task="transcribe",
                                 beam_size=beam_size,
                                 initial_prompt=prompt,
                             )
+                            segments = list(segments_gen)
                         except Exception as exc2:
                             logger.exception("Error en transcripción")
                             sounds.play_error()
