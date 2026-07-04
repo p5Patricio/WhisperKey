@@ -52,11 +52,11 @@ def main() -> None:
         root = tk.Tk()
     root.withdraw()
 
-    config_path = pathlib.Path("config.toml")
+    config_path = pathlib.Path(config_module.get_config_path())
     first_run = config_module.is_first_run(str(config_path))
 
     try:
-        config = config_module.load_config()
+        config = config_module.load_config(str(config_path))
     except ValueError as exc:
         log.error("Configuración inválida: %s", exc)
         sys.exit(1)

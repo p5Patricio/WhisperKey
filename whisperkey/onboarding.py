@@ -135,7 +135,7 @@ class OnboardingWizard:
 
     def _mark_first_run_done(self) -> None:
         """Escribe ``first_run = false`` en config.toml."""
-        config_path = Path("config.toml")
+        config_path = Path(config_module.get_config_path())
         try:
             if config_path.exists():
                 import tomllib
