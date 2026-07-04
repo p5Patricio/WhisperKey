@@ -66,6 +66,66 @@ def load_model(state: AppState, config: dict, sounds, overlay=None) -> None:
         return
 
     state.set_loading(True)
+    
+    # ------------------------------------------------------------------
+    # Self-healing Whisper.cpp Binary Download on Startup
+    # ------------------------------------------------------------------
+    from whisperkey.platform import get_platform
+    platform = get_platform()
+    project_root = platform.get_project_root()
+    main_exe_path = project_root / "assets" / "bin" / "main.exe"
+    
+    if not main_exe_path.exists():
+        logger.info("Binario main.exe no encontrado en %s. Descargando binarios de Whisper.cpp...", main_exe_path)
+        if overlay is not None:
+            overlay.show_loading()
+        try:
+            device, _ = platform.detect_gpu()
+            if device == "cuda":
+                url = "https://github.com/ggerganov/whisper.cpp/releases/download/v1.5.4/whisper-cublas-12.2.0-bin-x64.zip"
+                logger.info("GPU NVIDIA detectada. Descargando binario CUDA de whisper.cpp...")
+            else:
+                url = "https://github.com/ggerganov/whisper.cpp/releases/download/v1.5.4/whisper-1.5.4-bin-x64.zip"
+                logger.info("No se detectó GPU CUDA. Descargando binario CPU AVX2 de whisper.cpp...")
+                
+            bin_dir = project_root / "assets" / "bin"
+            bin_dir.mkdir(parents=True, exist_ok=True)
+            
+            import zipfile
+            import tempfile
+            temp_zip = pathlib.Path(tempfile.gettempdir()) / "whisper_bin_startup.zip"
+            
+            resp = requests.get(url, stream=True)
+            resp.raise_for_status()
+            total_length = resp.headers.get('content-length')
+            if total_length is not None:
+                total_length = int(total_length)
+                
+            with open(temp_zip, 'wb') as f:
+                if total_length is None:
+                    f.write(resp.content)
+                else:
+                    with CustomProgressBar(total=total_length, unit='B', unit_scale=True, desc="Descargando motor C++") as pbar:
+                        for chunk in resp.iter_content(chunk_size=4096):
+                            f.write(chunk)
+                            pbar.update(len(chunk))
+                            
+            logger.info("Extrayendo binarios a %s...", bin_dir)
+            with zipfile.ZipFile(temp_zip, 'r') as zip_ref:
+                zip_ref.extractall(bin_dir)
+                
+            try:
+                temp_zip.unlink()
+            except Exception:
+                pass
+            logger.info("Binarios de Whisper.cpp instalados con éxito.")
+        except Exception as exc:
+            logger.exception("Error al descargar e instalar binarios de Whisper.cpp")
+            state.set_loading(False)
+            if overlay is not None:
+                overlay.show_error(f"Error binarios: {exc}")
+            raise ModelLoadError(f"Error al descargar binarios de Whisper.cpp: {exc}") from exc
+
     model_cfg = config["model"]
     model_name = model_cfg["name"]
 

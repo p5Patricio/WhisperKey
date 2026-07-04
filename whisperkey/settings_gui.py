@@ -476,7 +476,7 @@ class SettingsGUI:
                     "font_size": int(self._font_size.get()),
                 },
             }
-            config_module.write_config("config.toml", new_config)
+            config_module.write_config(config_module.get_config_path(), new_config)
 
             # Sincronizar estado de sonido inmediatamente
             from whisperkey import sounds

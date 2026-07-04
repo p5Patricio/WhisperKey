@@ -213,8 +213,16 @@ def detect_optimal_model(config: dict) -> str:
         return "large-v3"
 
 
-def is_first_run(path: str = "config.toml") -> bool:
+def get_config_path() -> str:
+    """Retorna la ruta absoluta a config.toml en la raíz del proyecto."""
+    from whisperkey.platform import get_platform
+    return str(get_platform().get_project_root() / "config.toml")
+
+
+def is_first_run(path: str | None = None) -> bool:
     """Retorna True si no hay config o si app.first_run es True."""
+    if path is None:
+        path = get_config_path()
     p = pathlib.Path(path)
     if not p.exists():
         return True
@@ -226,12 +234,14 @@ def is_first_run(path: str = "config.toml") -> bool:
         return True
 
 
-def write_config(path: str, config_dict: dict) -> None:
+def write_config(path: str | None, config_dict: dict) -> None:
     """Escribe config.toml preservando comentarios de DEFAULT_TOML_CONTENT.
 
     Actualiza únicamente los valores presentes en *config_dict*; el resto
     del contenido (incluyendo comentarios y estructura) se conserva tal cual.
     """
+    if path is None:
+        path = get_config_path()
     p = pathlib.Path(path)
     lines = DEFAULT_TOML_CONTENT.splitlines(keepends=True)
     current_section: str | None = None
@@ -269,8 +279,10 @@ def write_config(path: str, config_dict: dict) -> None:
     p.write_text("".join(out_lines), encoding="utf-8")
 
 
-def load_config(path: str = "config.toml") -> dict:
+def load_config(path: str | None = None) -> dict:
     """Carga config.toml, fusiona con DEFAULTS y valida. Crea el archivo si no existe."""
+    if path is None:
+        path = get_config_path()
     p = pathlib.Path(path)
     if not p.exists():
         log.info(
