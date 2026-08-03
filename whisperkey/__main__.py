@@ -87,9 +87,14 @@ def main() -> None:
         if _CTK_AVAILABLE:
             from whisperkey.onboarding import OnboardingWizard
 
+            # Mostrar la ventana principal temporalmente para el onboarding
+            root.deiconify()
             wizard = OnboardingWizard(master=root)
+            # Esperar a que el wizard se cierre antes de continuar
             if hasattr(wizard, "_window") and wizard._window is not None:
                 root.wait_window(wizard._window)
+            # Ocultar nuevamente después del onboarding
+            root.withdraw()
         else:
             config_module.write_config(str(config_path), {"first_run": False})
 
