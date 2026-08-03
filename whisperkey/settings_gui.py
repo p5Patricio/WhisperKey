@@ -157,10 +157,15 @@ class SettingsGUI:
         has_logo = False
         if os.path.exists(logo_path):
             try:
+                pil_image = Image.open(logo_path)
+                # Mantener aspect ratio: logo original es 1148x730 (~1.57:1)
+                max_width = 60
+                aspect_ratio = pil_image.width / pil_image.height
+                logo_height = int(max_width / aspect_ratio)
                 logo_image = ctk.CTkImage(
-                    light_image=Image.open(logo_path),
-                    dark_image=Image.open(logo_path),
-                    size=(60, 60)
+                    light_image=pil_image,
+                    dark_image=pil_image,
+                    size=(max_width, logo_height)
                 )
                 self._logo_label = ctk.CTkLabel(self._window, text="", image=logo_image)
                 self._logo_label.pack(pady=(15, 0))

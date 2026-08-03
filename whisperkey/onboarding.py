@@ -176,10 +176,15 @@ class OnboardingWizard:
         logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "logo.png")
         if os.path.exists(logo_path):
             try:
+                pil_image = Image.open(logo_path)
+                # Mantener aspect ratio: logo original es 1148x730 (~1.57:1)
+                max_width = 100
+                aspect_ratio = pil_image.width / pil_image.height
+                logo_height = int(max_width / aspect_ratio)
                 logo_image = ctk.CTkImage(
-                    light_image=Image.open(logo_path),
-                    dark_image=Image.open(logo_path),
-                    size=(100, 100)
+                    light_image=pil_image,
+                    dark_image=pil_image,
+                    size=(max_width, logo_height)
                 )
                 ctk.CTkLabel(self._content, text="", image=logo_image).pack(pady=(10, 0))
             except Exception as e:
