@@ -72,7 +72,8 @@ def start_listener(
         if state.model is None:
             if key == toggle_key or key == ptt_key:
                 sounds.play_error()
-            return
+                return
+            # Allow load_model_key to work even when model is not loaded.
 
         # — PTT: push-to-talk —
         if key == ptt_key:
