@@ -6,6 +6,7 @@ import logging
 import os
 import subprocess
 import pathlib
+import sys
 import wave
 import tempfile
 import requests
@@ -233,68 +234,68 @@ def transcription_worker(
                     audio_int16 = (audio_np * 32767.0).astype(np.int16)
                     
                     temp_fd, temp_path = tempfile.mkstemp(suffix=".wav")
+                    os.close(temp_fd)
                     try:
-                        with os.fdopen(temp_fd, 'wb') as f:
-                            with wave.open(f, 'wb') as wav_file:
-                                wav_file.setnchannels(1)
-                                wav_file.setsampwidth(2)
-                                wav_file.setframerate(sample_rate)
-                                wav_file.writeframes(audio_int16.tobytes())
+                        with wave.open(temp_path, 'wb') as wav_file:
+                            wav_file.setnchannels(1)
+                            wav_file.setsampwidth(2)
+                            wav_file.setframerate(sample_rate)
+                            wav_file.writeframes(audio_int16.tobytes())
 
                         # Ejecutar main.exe
                         from whisperkey.platform import get_platform
                         platform = get_platform()
                         project_root = platform.get_project_root()
                         main_exe_path = project_root / "assets" / "bin" / "main.exe"
-                        
+                        bin_dir = main_exe_path.parent
+
+                        # Registrar directorio de DLLs en Windows para cargar cublas64_12.dll / whisper.dll
+                        if sys.platform == "win32":
+                            try:
+                                os.add_dll_directory(str(bin_dir))
+                            except Exception as dll_exc:
+                                logger.debug("No se pudo registrar DLL directory %s: %s", bin_dir, dll_exc)
+
                         model_name = state.model
                         model_path = pathlib.Path.home() / ".whisperkey" / "models" / f"ggml-{model_name}.bin"
-                        
+
                         cmd = [
                             str(main_exe_path),
                             "-m", str(model_path),
                             "-f", str(temp_path),
                             "-l", language or "auto",
+                            "-nt",
                         ]
+                        # NOTE: whisper.cpp v1.5.4 main.exe crashes when -p/--prompt is passed,
+                        # even with simple ASCII text. Skip it entirely to avoid STATUS_STACK_BUFFER_OVERRUN.
                         if prompt:
-                            cmd.extend(["-p", prompt])
-                            
+                            logger.debug("Prompt omitido para whisper.cpp v1.5.4: %s", prompt)
+
                         # Subprocess execution with window creation suppressed
+
                         try:
                             logger.info("Ejecutando whisper.cpp en subproceso: %s", " ".join(cmd))
                             result = subprocess.run(
                                 cmd,
                                 capture_output=True,
                                 text=True,
-                                creationflags=subprocess.CREATE_NO_WINDOW
+                                encoding="utf-8",
+                                errors="replace",
+                                cwd=str(bin_dir),
+                                creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
                             )
-                            # Check if failed or has DLL errors
-                            dll_error = False
                             if result.returncode != 0:
-                                dll_error = True
-                            if result.stderr and ("dll" in result.stderr.lower() or "not found" in result.stderr.lower() or "error" in result.stderr.lower()):
-                                dll_error = True
-                                
-                            if dll_error:
                                 raise Exception(f"whisper.cpp retornó error. Código: {result.returncode}. Stderr: {result.stderr}")
                         except Exception as exc:
                             logger.warning("La ejecución GPU/CUDA falló o el binario no está: %s. Aplicando fallback de CPU...", exc)
-                            # Alertar al usuario
-                            def alert_user():
-                                import tkinter.messagebox
-                                tkinter.messagebox.showwarning(
-                                    "WhisperKey - Fallback de CPU",
-                                    "La ejecución en GPU (CUDA) falló o faltan dependencias (DLLs).\nSe descargará y utilizará la versión de CPU (AVX2) de forma automática."
-                                )
-                            import threading
-                            threading.Thread(target=alert_user, daemon=True).start()
-                            
+                            # Los workers de background NUNCA deben mostrar modales; solo logueamos.
+
                             cpu_bin_dir = project_root / "assets" / "bin" / "cpu"
                             cpu_bin_dir.mkdir(parents=True, exist_ok=True)
                             main_exe_path_cpu = cpu_bin_dir / "main.exe"
-                            
+
                             if not main_exe_path_cpu.exists():
-                                url_cpu = "https://github.com/ggerganov/whisper.cpp/releases/download/v1.5.4/whisper-1.5.4-bin-x64.zip"
+                                url_cpu = "https://github.com/ggerganov/whisper.cpp/releases/download/v1.5.4/whisper-bin-x64.zip"
                                 import zipfile
                                 temp_zip = pathlib.Path(tempfile.gettempdir()) / "whisper_cpu_bin.zip"
                                 try:
@@ -312,14 +313,17 @@ def transcription_worker(
                                             temp_zip.unlink()
                                         except Exception:
                                             pass
-                            
+
                             cmd[0] = str(main_exe_path_cpu)
                             logger.info("Reintentando con binario CPU: %s", " ".join(cmd))
                             result = subprocess.run(
                                 cmd,
                                 capture_output=True,
                                 text=True,
-                                creationflags=subprocess.CREATE_NO_WINDOW
+                                encoding="utf-8",
+                                errors="replace",
+                                cwd=str(main_exe_path_cpu.parent),
+                                creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
                             )
                             if result.returncode != 0:
                                 raise Exception(f"La transcripción con CPU también falló: {result.stderr}")
@@ -336,6 +340,8 @@ def transcription_worker(
                                 text_part = line_str[idx + 1:].strip()
                                 if text_part:
                                     parsed_lines.append(text_part)
+                            else:
+                                parsed_lines.append(line_str)
                         
                         text = " ".join(parsed_lines).strip()
                         

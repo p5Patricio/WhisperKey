@@ -28,17 +28,29 @@ except ImportError:  # pragma: no cover
 
 
 def main() -> None:
-    # Ocultar consola en Windows cuando corre desde terminal normal
-    if sys.platform == "win32":
+    # Ocultar consola en Windows cuando corre desde pythonw.exe (sin consola).
+    # Si se ejecuta desde python.exe, preservar la consola para poder debuguear.
+    if sys.platform == "win32" and "pythonw" in sys.executable.lower():
         try:
             import ctypes
             ctypes.windll.kernel32.FreeConsole()
         except Exception:
             pass
 
+    # Configurar logging a consola y a archivo en ~/.whisperkey/whisperkey.log
+    log_dir = pathlib.Path.home() / ".whisperkey"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_file = log_dir / "whisperkey.log"
+
+    file_handler = logging.FileHandler(log_file, encoding="utf-8")
+    file_handler.setLevel(logging.INFO)
+    formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
+    file_handler.setFormatter(formatter)
+
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(message)s",
+        handlers=[logging.StreamHandler(), file_handler],
     )
 
     # ------------------------------------------------------------------
@@ -61,20 +73,12 @@ def main() -> None:
         log.error("Configuración inválida: %s", exc)
         sys.exit(1)
 
-    sounds.set_enabled(config["audio"].get("notification_sounds", True))
-
     if first_run and sys.platform == "darwin":
         log.warning(
             "macOS: Para que WhisperKey funcione correctamente, concedé permisos de "
             "Accesibilidad a la terminal/IDE desde la que se ejecuta "
             "(Preferencias del Sistema > Seguridad y Privacidad > Accesibilidad)."
         )
-
-    log.info(
-        "WhisperKey iniciando... PTT: %s | Toggle: %s",
-        config["hotkeys"]["ptt"],
-        config["hotkeys"]["toggle"],
-    )
 
     # ------------------------------------------------------------------
     # Onboarding (primer uso)
@@ -83,9 +87,26 @@ def main() -> None:
         if _CTK_AVAILABLE:
             from whisperkey.onboarding import OnboardingWizard
 
-            OnboardingWizard(master=root)
+            wizard = OnboardingWizard(master=root)
+            if hasattr(wizard, "_window") and wizard._window is not None:
+                root.wait_window(wizard._window)
         else:
             config_module.write_config(str(config_path), {"first_run": False})
+
+    # Recargar configuración actualizada tras el onboarding
+    try:
+        config = config_module.load_config(str(config_path))
+    except ValueError as exc:
+        log.error("Configuración inválida: %s", exc)
+        sys.exit(1)
+
+    sounds.set_enabled(config["audio"].get("notification_sounds", True))
+
+    log.info(
+        "WhisperKey iniciando... PTT: %s | Toggle: %s",
+        config["hotkeys"]["ptt"],
+        config["hotkeys"]["toggle"],
+    )
 
     # ------------------------------------------------------------------
     # Chequeo de actualizaciones asincrónico
@@ -130,8 +151,8 @@ def main() -> None:
             splash.set_status("Cargando modelo Whisper...")
         try:
             load_model(state, config, sounds, overlay)
-        except Exception:
-            pass
+        except Exception as exc:
+            log.exception("Error al cargar modelo Whisper: %s", exc)
         finally:
             if splash is not None:
                 splash.close()

@@ -378,7 +378,7 @@ class InstallerWizard:
         bin_dir.mkdir(parents=True, exist_ok=True)
         
         url_cuda = "https://github.com/ggerganov/whisper.cpp/releases/download/v1.5.4/whisper-cublas-12.2.0-bin-x64.zip"
-        url_cpu = "https://github.com/ggerganov/whisper.cpp/releases/download/v1.5.4/whisper-1.5.4-bin-x64.zip"
+        url_cpu = "https://github.com/ggerganov/whisper.cpp/releases/download/v1.5.4/whisper-bin-x64.zip"
         
         import tempfile
         import zipfile
@@ -447,7 +447,7 @@ class InstallerWizard:
                 "first_run": False,
             },
         }
-        config_path = pathlib.Path(__file__).parent.parent / "config.toml"
+        config_path = pathlib.Path(config_module.get_config_path())
         config_module.write_config(str(config_path), config_dict)
 
     def _get_venv_python(self) -> pathlib.Path:

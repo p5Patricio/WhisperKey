@@ -27,7 +27,7 @@ DEFAULTS = {
         "notification_sounds": True,
     },
     "hotkeys": {
-        "ptt": "caps_lock",
+        "ptt": "f9",
         "toggle": "f10",
         "load_model_key": "",
     },
@@ -72,7 +72,7 @@ notification_sounds = true
 [hotkeys]
 # Tecla para Push-to-Talk (mantener presionada mientras hablás)
 # Opciones comunes: "caps_lock", "f9", "f10", "f11", "f12", "scroll_lock"
-ptt = "caps_lock"
+ptt = "f9"
 # Tecla para Toggle (presionar para iniciar grabación, volver a presionar para detener)
 # Opciones comunes: "f10", "f11", "f12", "scroll_lock", "pause"
 toggle = "f10"
@@ -213,16 +213,39 @@ def detect_optimal_model(config: dict) -> str:
         return "large-v3"
 
 
-def get_config_path() -> str:
-    """Retorna la ruta absoluta a config.toml en la raíz del proyecto."""
+def _legacy_repo_config_path() -> pathlib.Path:
+    """Ruta legacy: config.toml en la raíz del repositorio (usada solo para migración)."""
     from whisperkey.platform import get_platform
-    return str(get_platform().get_project_root() / "config.toml")
+    return get_platform().get_project_root() / "config.toml"
+
+
+def get_config_path() -> str:
+    """Retorna la ruta absoluta y canónica a config.toml en ~/.whisperkey/."""
+    config_dir = pathlib.Path.home() / ".whisperkey"
+    config_dir.mkdir(parents=True, exist_ok=True)
+    return str(config_dir / "config.toml")
+
+
+def _migrate_legacy_config() -> None:
+    """Migra config.toml desde la raíz del repo hacia ~/.whisperkey/config.toml una sola vez."""
+    legacy = _legacy_repo_config_path()
+    canonical = pathlib.Path(get_config_path())
+    if canonical.exists():
+        return
+    if legacy.exists():
+        try:
+            import shutil
+            shutil.copy2(legacy, canonical)
+            log.info("Configuración migrada de %s a %s", legacy, canonical)
+        except Exception as exc:
+            log.warning("No se pudo migrar config legacy %s: %s", legacy, exc)
 
 
 def is_first_run(path: str | None = None) -> bool:
     """Retorna True si no hay config o si app.first_run es True."""
     if path is None:
         path = get_config_path()
+    _migrate_legacy_config()
     p = pathlib.Path(path)
     if not p.exists():
         return True
@@ -242,7 +265,9 @@ def write_config(path: str | None, config_dict: dict) -> None:
     """
     if path is None:
         path = get_config_path()
+        _migrate_legacy_config()
     p = pathlib.Path(path)
+    p.parent.mkdir(parents=True, exist_ok=True)
     lines = DEFAULT_TOML_CONTENT.splitlines(keepends=True)
     current_section: str | None = None
     out_lines: list[str] = []
@@ -283,6 +308,7 @@ def load_config(path: str | None = None) -> dict:
     """Carga config.toml, fusiona con DEFAULTS y valida. Crea el archivo si no existe."""
     if path is None:
         path = get_config_path()
+    _migrate_legacy_config()
     p = pathlib.Path(path)
     if not p.exists():
         log.info(

@@ -54,3 +54,6 @@ config.toml
 # SDD / agentes
 openspec/
 .atl/
+
+# Whisper.cpp binarios descargados
+assets/bin/
