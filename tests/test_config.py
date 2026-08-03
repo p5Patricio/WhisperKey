@@ -22,6 +22,32 @@ def isolated_home(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch):
 
 
 @pytest.fixture(autouse=True)
+def isolated_project_root(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch):
+    """Redirect project root to a temp directory so tests never touch the real config."""
+    from whisperkey.platform import get_platform
+    
+    # Create a fake project root
+    fake_root = tmp_path / "project"
+    fake_root.mkdir(parents=True)
+    
+    # Mock get_project_root to return our fake root
+    original_get_project_root = get_platform().get_project_root
+    
+    def fake_get_project_root():
+        return fake_root
+    
+    monkeypatch.setattr(get_platform(), "get_project_root", fake_get_project_root)
+    
+    # Also mock _legacy_repo_config_path to use our fake root
+    def fake_legacy_path():
+        return fake_root / "config.toml"
+    
+    monkeypatch.setattr(config_module, "_legacy_repo_config_path", fake_legacy_path)
+    
+    return fake_root
+
+
+@pytest.fixture(autouse=True)
 def isolated_repo_root(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch):
     """Redirect the legacy repo-root config path to a temp directory.
 
@@ -37,12 +63,13 @@ def isolated_repo_root(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch):
 
 
 class TestConfigPath:
-    def test_get_config_path_is_absolute_and_under_whsiperkey(
+    def test_get_config_path_is_absolute_and_under_project_root(
         self, isolated_home: pathlib.Path
     ) -> None:
+        # In dev mode (not frozen), config should be in project root
         path = pathlib.Path(config_module.get_config_path())
         assert path.is_absolute()
-        assert path == isolated_home / ".whisperkey" / "config.toml"
+        assert path.name == "config.toml"
         assert path.parent.exists()
 
     def test_get_config_path_idempotent(

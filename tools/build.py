@@ -1,4 +1,4 @@
-"""Script de construcción con PyInstaller para WisprLocal."""
+"""Build script for WhisperKey using PyInstaller."""
 
 from __future__ import annotations
 
@@ -8,29 +8,30 @@ import subprocess
 import sys
 from pathlib import Path
 
+from whisperkey.version import __version__
+
 log = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).parent.parent.resolve()
-DIST_DIR = PROJECT_ROOT / "dist" / "WisprLocal"
+DIST_DIR = PROJECT_ROOT / "dist" / "WhisperKey"
 
 
 def build() -> None:
-    """Ejecuta PyInstaller con los parámetros óptimos para WisprLocal."""
-    sep = os.pathsep  # ; en Windows, : en Unix
+    """Run PyInstaller with optimal parameters for WhisperKey."""
+    sep = os.pathsep
 
     add_data = [
         f"assets{sep}assets",
-        f"config.toml{sep}.",
     ]
 
     hidden_imports = [
-        "wispr.platform.windows",
-        "wispr.platform.linux",
-        "wispr.platform.macos",
-        "wispr.splash",
-        "wispr.settings_gui",
-        "wispr.onboarding",
-        "wispr.updater",
+        "whisperkey.platform.windows",
+        "whisperkey.platform.linux",
+        "whisperkey.platform.macos",
+        "whisperkey.splash",
+        "whisperkey.settings_gui",
+        "whisperkey.onboarding",
+        "whisperkey.updater",
     ]
 
     excludes = [
@@ -57,7 +58,7 @@ def build() -> None:
         "PyInstaller",
         "--onedir",
         "--windowed",
-        "--name=WisprLocal",
+        "--name=WhisperKey",
         f"--distpath={PROJECT_ROOT / 'dist'}",
         f"--workpath={PROJECT_ROOT / 'build'}",
         f"--specpath={PROJECT_ROOT}",
@@ -74,11 +75,12 @@ def build() -> None:
     for exc in excludes:
         cmd.append(f"--exclude-module={exc}")
 
-    cmd.append(str(PROJECT_ROOT / "wispr" / "__main__.py"))
+    cmd.append(str(PROJECT_ROOT / "whisperkey" / "__main__.py"))
 
-    log.info("Ejecutando: %s", " ".join(cmd))
+    log.info("Building WhisperKey v%s", __version__)
+    log.info("Command: %s", " ".join(cmd))
     subprocess.run(cmd, check=True)
-    log.info("Build completado en %s", DIST_DIR)
+    log.info("Build completed in %s", DIST_DIR)
 
 
 def main() -> None:
@@ -86,10 +88,10 @@ def main() -> None:
     try:
         build()
     except subprocess.CalledProcessError as exc:
-        log.error("PyInstaller falló con código %s", exc.returncode)
+        log.error("PyInstaller failed with code %s", exc.returncode)
         sys.exit(1)
     except FileNotFoundError:
-        log.error("PyInstaller no encontrado. Instalalo con: pip install pyinstaller")
+        log.error("PyInstaller not found. Install with: pip install pyinstaller")
         sys.exit(1)
 
 

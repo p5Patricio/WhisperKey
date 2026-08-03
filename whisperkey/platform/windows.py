@@ -6,6 +6,7 @@ import logging
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 from whisperkey.platform.base import BasePlatform
@@ -43,6 +44,18 @@ class WindowsPlatform(BasePlatform):
 
     def get_project_root(self) -> Path:
         return Path(__file__).parent.parent.parent.resolve()
+
+    def get_install_dir(self) -> Path:
+        """Return install directory (frozen) or project root (dev)."""
+        if getattr(sys, 'frozen', False):
+            return Path(sys.executable).parent
+        return self.get_project_root()
+
+    def get_appdata_dir(self) -> Path:
+        """Return %APPDATA%/WhisperKey/ (frozen) or project root (dev)."""
+        if getattr(sys, 'frozen', False):
+            return Path(os.environ['APPDATA']) / 'WhisperKey'
+        return self.get_project_root()
 
     def get_venv_python(self) -> Path:
         return self.get_project_root() / ".venv" / "Scripts" / "python.exe"

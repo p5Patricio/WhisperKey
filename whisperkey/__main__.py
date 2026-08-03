@@ -67,6 +67,8 @@ def main() -> None:
     config_path = pathlib.Path(config_module.get_config_path())
     first_run = config_module.is_first_run(str(config_path))
 
+    config_module.migrate_config_if_needed()
+
     try:
         config = config_module.load_config(str(config_path))
     except ValueError as exc:

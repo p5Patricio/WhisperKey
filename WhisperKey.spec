@@ -1,20 +1,49 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+from whisperkey.version import __version__
+
+block_cipher = None
 
 a = Analysis(
-    ['C:\\Users\\Usuario\\Documents\\WhisperKey\\whisperkey\\__main__.py'],
+    ['whisperkey/__main__.py'],
     pathex=[],
     binaries=[],
-    datas=[('assets', 'assets'), ('config.toml', '.')],
-    hiddenimports=['whisperkey.platform.windows', 'whisperkey.platform.linux', 'whisperkey.platform.macos', 'whisperkey.splash', 'whisperkey.settings_gui', 'whisperkey.onboarding', 'whisperkey.updater'],
+    datas=[
+        ('whisperkey/version.py', 'whisperkey'),
+        ('assets/bin', 'assets/bin'),
+        ('assets/icons', 'assets/icons'),
+    ],
+    hiddenimports=[
+        'whisperkey.platform.windows',
+        'whisperkey.platform.linux',
+        'whisperkey.platform.macos',
+        'whisperkey.splash',
+        'whisperkey.settings_gui',
+        'whisperkey.onboarding',
+        'whisperkey.updater',
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=['tests', 'docs', 'notebooks', 'torch.testing', 'torch.utils.benchmark', 'torch.utils.tensorboard', 'torch.utils.cpp_extension', 'torch.utils.mobile_optimizer', 'torch.utils.dlpack', 'IPython', 'matplotlib', 'pytest'],
+    excludes=[
+        'tests',
+        'docs',
+        'notebooks',
+        'torch.testing',
+        'torch.utils.benchmark',
+        'torch.utils.tensorboard',
+        'torch.utils.cpp_extension',
+        'torch.utils.mobile_optimizer',
+        'torch.utils.dlpack',
+        'IPython',
+        'matplotlib',
+        'pytest',
+    ],
     noarchive=False,
     optimize=0,
+    cipher=block_cipher,
 )
-pyz = PYZ(a.pure)
+pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 exe = EXE(
     pyz,
@@ -32,7 +61,8 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['C:\\Users\\Usuario\\Documents\\WhisperKey\\assets\\icons\\app.ico'],
+    icon='assets/icons/app.ico',
+    version='whisperkey/version.py',
 )
 coll = COLLECT(
     exe,

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import logging
+import os
 import pathlib
 import tomllib
 
@@ -220,10 +221,41 @@ def _legacy_repo_config_path() -> pathlib.Path:
 
 
 def get_config_path() -> str:
-    """Retorna la ruta absoluta y canónica a config.toml en ~/.whisperkey/."""
-    config_dir = pathlib.Path.home() / ".whisperkey"
-    config_dir.mkdir(parents=True, exist_ok=True)
-    return str(config_dir / "config.toml")
+    """Return config path: %APPDATA%/WhisperKey/config.toml when frozen, else project root."""
+    import sys
+    if getattr(sys, 'frozen', False):
+        from whisperkey.platform import get_platform
+        platform = get_platform()
+        appdata_dir = platform.get_appdata_dir()
+        appdata_dir.mkdir(parents=True, exist_ok=True)
+        return str(appdata_dir / 'config.toml')
+    else:
+        from whisperkey.platform import get_platform
+        return str(get_platform().get_project_root() / 'config.toml')
+
+
+def migrate_config_if_needed() -> None:
+    """Copy config from project root to AppData on first frozen run."""
+    import sys
+    import shutil
+
+    if not getattr(sys, 'frozen', False):
+        return
+
+    appdata_config = pathlib.Path(os.environ['APPDATA']) / 'WhisperKey' / 'config.toml'
+    if appdata_config.exists():
+        return
+
+    from whisperkey.platform import get_platform
+    old_config = get_platform().get_project_root() / 'config.toml'
+
+    if old_config.exists():
+        appdata_config.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            shutil.copy2(old_config, appdata_config)
+            log.info("Migrated config to %s", appdata_config)
+        except Exception as exc:
+            log.warning("Failed to migrate config: %s", exc)
 
 
 def _migrate_legacy_config() -> None:
