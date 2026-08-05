@@ -117,7 +117,15 @@ def load_model(state: AppState, config: dict, sounds, overlay=None) -> None:
                     if total_length is None:
                         f.write(resp.content)
                     else:
-                        with CustomProgressBar(total=total_length, unit='B', unit_scale=True, desc="Descargando motor C++") as pbar:
+                        # Disable tqdm if no valid output stream (e.g., when running from autostart)
+                        disable_tqdm = not (sys.stdout and sys.stderr)
+                        with CustomProgressBar(
+                            total=total_length, 
+                            unit='B', 
+                            unit_scale=True, 
+                            desc="Descargando motor C++",
+                            disable=disable_tqdm
+                        ) as pbar:
                             for chunk in resp.iter_content(chunk_size=4096):
                                 if chunk:
                                     f.write(chunk)
@@ -174,7 +182,15 @@ def load_model(state: AppState, config: dict, sounds, overlay=None) -> None:
                     if total_length is None:
                         f.write(response.content)
                     else:
-                        with CustomProgressBar(total=total_length, unit='B', unit_scale=True, desc=f"ggml-{model_name}.bin") as pbar:
+                        # Disable tqdm if no valid output stream (e.g., when running from autostart)
+                        disable_tqdm = not (sys.stdout and sys.stderr)
+                        with CustomProgressBar(
+                            total=total_length, 
+                            unit='B', 
+                            unit_scale=True, 
+                            desc=f"ggml-{model_name}.bin",
+                            disable=disable_tqdm
+                        ) as pbar:
                             for chunk in response.iter_content(chunk_size=4096):
                                 if chunk:
                                     f.write(chunk)
