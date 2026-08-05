@@ -94,22 +94,37 @@ def load_model(state: AppState, config: dict, sounds, overlay=None) -> None:
             
             import zipfile
             import tempfile
-            temp_zip = pathlib.Path(tempfile.gettempdir()) / "whisper_bin_startup.zip"
             
-            resp = requests.get(url, stream=True)
+            # Get temp directory with fallback
+            temp_dir = tempfile.gettempdir()
+            if not temp_dir:
+                temp_dir = str(project_root / "temp")
+                pathlib.Path(temp_dir).mkdir(parents=True, exist_ok=True)
+            
+            temp_zip = pathlib.Path(temp_dir) / "whisper_bin_startup.zip"
+            
+            resp = requests.get(url, stream=True, timeout=30)
             resp.raise_for_status()
             total_length = resp.headers.get('content-length')
             if total_length is not None:
                 total_length = int(total_length)
                 
-            with open(temp_zip, 'wb') as f:
-                if total_length is None:
-                    f.write(resp.content)
-                else:
-                    with CustomProgressBar(total=total_length, unit='B', unit_scale=True, desc="Descargando motor C++") as pbar:
-                        for chunk in resp.iter_content(chunk_size=4096):
-                            f.write(chunk)
-                            pbar.update(len(chunk))
+            # Ensure parent directory exists
+            temp_zip.parent.mkdir(parents=True, exist_ok=True)
+            
+            try:
+                with open(temp_zip, 'wb') as f:
+                    if total_length is None:
+                        f.write(resp.content)
+                    else:
+                        with CustomProgressBar(total=total_length, unit='B', unit_scale=True, desc="Descargando motor C++") as pbar:
+                            for chunk in resp.iter_content(chunk_size=4096):
+                                if chunk:
+                                    f.write(chunk)
+                                    pbar.update(len(chunk))
+            except Exception as write_exc:
+                logger.error("Failed to write temp file %s: %s", temp_zip, write_exc)
+                raise
                             
             logger.info("Extrayendo binarios a %s...", bin_dir)
             with zipfile.ZipFile(temp_zip, 'r') as zip_ref:
@@ -145,20 +160,28 @@ def load_model(state: AppState, config: dict, sounds, overlay=None) -> None:
             models_dir.mkdir(parents=True, exist_ok=True)
             dest_file = models_dir / f"ggml-{model_name}.bin"
             
-            response = requests.get(url, stream=True)
+            response = requests.get(url, stream=True, timeout=30)
             response.raise_for_status()
             total_length = response.headers.get('content-length')
             if total_length is not None:
                 total_length = int(total_length)
             
-            with open(dest_file, 'wb') as f:
-                if total_length is None:
-                    f.write(response.content)
-                else:
-                    with CustomProgressBar(total=total_length, unit='B', unit_scale=True, desc=f"ggml-{model_name}.bin") as pbar:
-                        for chunk in response.iter_content(chunk_size=4096):
-                            f.write(chunk)
-                            pbar.update(len(chunk))
+            # Ensure parent directory exists
+            dest_file.parent.mkdir(parents=True, exist_ok=True)
+            
+            try:
+                with open(dest_file, 'wb') as f:
+                    if total_length is None:
+                        f.write(response.content)
+                    else:
+                        with CustomProgressBar(total=total_length, unit='B', unit_scale=True, desc=f"ggml-{model_name}.bin") as pbar:
+                            for chunk in response.iter_content(chunk_size=4096):
+                                if chunk:
+                                    f.write(chunk)
+                                    pbar.update(len(chunk))
+            except Exception as write_exc:
+                logger.error("Failed to write model file %s: %s", dest_file, write_exc)
+                raise
             logger.info("Modelo descargado correctamente.")
         except Exception as exc:
             logger.exception("Error al descargar el modelo %s", model_name)
