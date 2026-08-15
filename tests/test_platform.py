@@ -211,3 +211,40 @@ class TestMacAndLinuxCommon:
         device, compute = platform.detect_gpu()
         assert device == "cpu"
         assert compute == "int8"
+
+
+class TestSingleInstanceLock:
+    def test_windows_single_instance_lock(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(sys, "platform", "win32")
+        importlib.reload(platform_pkg)
+        platform = get_platform()
+
+        # First acquisition should succeed
+        success1, handle1 = platform.acquire_single_instance_lock("Test_Unique_Mutex_1")
+        assert success1 is True
+
+        # Second acquisition with same name should report already exists (False)
+        success2, handle2 = platform.acquire_single_instance_lock("Test_Unique_Mutex_1")
+        assert success2 is False
+        assert handle2 is None
+
+        # Clean up
+        platform.release_single_instance_lock(handle1)
+
+    def test_base_platform_single_instance_lock_fallback(self) -> None:
+        class DummyPlatform(BasePlatform):
+            def play_beep(self, freq: int, duration: float) -> None: pass
+            def get_paste_shortcut(self) -> tuple[str, str]: return ("ctrl", "v")
+            def detect_gpu(self) -> tuple[str, str]: return ("cpu", "int8")
+            def setup_autostart(self) -> None: pass
+            def remove_autostart(self) -> None: pass
+            def is_autostart_enabled(self) -> bool: return False
+            def get_venv_python(self) -> pathlib.Path: return pathlib.Path("python")
+            def get_project_root(self) -> pathlib.Path: return pathlib.Path(".")
+
+        dummy = DummyPlatform()
+        success, handle = dummy.acquire_single_instance_lock()
+        assert success is True
+        assert handle is None
+        dummy.release_single_instance_lock(handle)
+

@@ -1,49 +1,27 @@
 # -*- mode: python ; coding: utf-8 -*-
+from PyInstaller.utils.hooks import collect_all
 
-from whisperkey.version import __version__
+datas = [('C:/Users/Usuario/Documents/WhisperKey/assets/icons', 'assets/icons'), ('C:/Users/Usuario/Documents/WhisperKey/assets/logo.png', 'assets'), ('C:/Users/Usuario/Documents/WhisperKey/build/engine-cpu/Release', 'assets/bin')]
+binaries = []
+hiddenimports = ['whisperkey.platform.windows', 'whisperkey.platform.linux', 'whisperkey.platform.macos', 'whisperkey.engine', 'whisperkey.splash', 'whisperkey.settings_gui', 'whisperkey.onboarding', 'whisperkey.updater']
+tmp_ret = collect_all('customtkinter')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
-block_cipher = None
 
 a = Analysis(
-    ['whisperkey/__main__.py'],
+    ['C:/Users/Usuario/Documents/WhisperKey/whisperkey/__main__.py'],
     pathex=[],
-    binaries=[],
-    datas=[
-        ('whisperkey/version.py', 'whisperkey'),
-        ('assets/bin', 'assets/bin'),
-        ('assets/icons', 'assets/icons'),
-    ],
-    hiddenimports=[
-        'whisperkey.platform.windows',
-        'whisperkey.platform.linux',
-        'whisperkey.platform.macos',
-        'whisperkey.splash',
-        'whisperkey.settings_gui',
-        'whisperkey.onboarding',
-        'whisperkey.updater',
-    ],
+    binaries=binaries,
+    datas=datas,
+    hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[
-        'tests',
-        'docs',
-        'notebooks',
-        'torch.testing',
-        'torch.utils.benchmark',
-        'torch.utils.tensorboard',
-        'torch.utils.cpp_extension',
-        'torch.utils.mobile_optimizer',
-        'torch.utils.dlpack',
-        'IPython',
-        'matplotlib',
-        'pytest',
-    ],
+    excludes=['tests', 'docs', 'notebooks', 'IPython', 'matplotlib', 'pytest', 'torch', 'torchaudio', 'torchvision', 'onnxruntime', 'ctranslate2', 'faster_whisper', 'transformers'],
     noarchive=False,
     optimize=0,
-    cipher=block_cipher,
 )
-pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+pyz = PYZ(a.pure)
 
 exe = EXE(
     pyz,
@@ -61,8 +39,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='assets/icons/app.ico',
-    version='whisperkey/version.py',
+    icon=['C:/Users/Usuario/Documents/WhisperKey/assets/icons/app.ico'],
 )
 coll = COLLECT(
     exe,

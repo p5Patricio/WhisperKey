@@ -218,13 +218,17 @@ def show_update_dialog(
     def _on_update_now() -> None:
         installer_url, expected_hash = _get_installer_url_and_hash()
         if not installer_url:
-            installer_url = url
+            log.info("No se encontró instalador .exe en los assets de la release. Abriendo en el navegador...")
+            webbrowser.open(url)
+            dialog.destroy()
+            return
 
         temp_dir = pathlib.Path(tempfile.gettempdir())
         installer_path = temp_dir / "WhisperKey-Setup.exe"
 
         progress_label.configure(text="Downloading...")
         dialog.update_idletasks()
+
 
         if not download_installer(installer_url, installer_path):
             progress_label.configure(text="Download failed!", text_color="red")

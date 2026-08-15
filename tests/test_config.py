@@ -205,3 +205,22 @@ class TestWindowsPath:
 def test_defaults_ptt_is_f9() -> None:
     assert config_module.DEFAULTS["hotkeys"]["ptt"] == "f9"
     assert 'ptt = "f9"' in config_module.DEFAULT_TOML_CONTENT
+
+
+def test_deep_merge_preserves_unmodified_sections() -> None:
+    base = {
+        "model": {"name": "tiny", "device": "cpu"},
+        "transcription": {"prompt": "Custom prompt", "language": "es", "threads": 4},
+        "app": {"first_run": False},
+    }
+    updates = {
+        "model": {"name": "base"},
+        "audio": {"sample_rate": 16000},
+    }
+    merged = config_module._deep_merge(base, updates)
+    assert merged["transcription"]["prompt"] == "Custom prompt"
+    assert merged["transcription"]["language"] == "es"
+    assert merged["model"]["name"] == "base"
+    assert merged["model"]["device"] == "cpu"
+    assert merged["app"]["first_run"] is False
+

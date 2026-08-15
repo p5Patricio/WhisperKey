@@ -57,3 +57,5 @@ openspec/
 
 # Whisper.cpp binarios descargados
 assets/bin/
+assets/bin-cuda/
+

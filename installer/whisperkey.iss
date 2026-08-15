@@ -1,5 +1,5 @@
 #define MyAppName "WhisperKey"
-#define MyAppVersion "1.1.0"
+#define MyAppVersion "1.2.0"
 #define MyAppPublisher "p5Patricio"
 #define MyAppURL "https://github.com/p5Patricio/WhisperKey"
 #define MyAppExeName "WhisperKey.exe"

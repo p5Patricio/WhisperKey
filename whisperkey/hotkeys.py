@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 import os
 
+from typing import Callable
+
 from pynput import keyboard as kb
 
 from whisperkey.state import AppState
@@ -40,6 +42,8 @@ def start_listener(
     config: dict,
     overlay,
     sounds,
+    on_load: Callable[[], None] | None = None,
+    on_unload: Callable[[], None] | None = None,
 ) -> kb.Listener:
     """Crea e inicia el Listener de teclado.
 
@@ -102,9 +106,13 @@ def start_listener(
             if state.model is None:
                 logger.info("Cargando modelo por hotkey...")
                 state.set_load_requested(True)
+                if on_load is not None:
+                    on_load()
             else:
                 logger.info("Descargando modelo por hotkey...")
                 state.set_unload_requested(True)
+                if on_unload is not None:
+                    on_unload()
 
     def on_release(key):
         global _toggle_lock
@@ -126,3 +134,4 @@ def start_listener(
     listener = kb.Listener(on_press=on_press, on_release=on_release)
     listener.start()
     return listener
+

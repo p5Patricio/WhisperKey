@@ -16,7 +16,7 @@ DEFAULTS = {
     },
     "model": {
         "name": "tiny",
-        "device": "cuda",
+        "device": "auto",
         "compute_type": "int8_float16",
         "use_cpu_fallback": False,
     },
@@ -42,8 +42,7 @@ DEFAULTS = {
         "language": "",
         "prompt": "Nota técnica. Testing code, PRs, backend logs. Spanglish mode.",
         "min_duration": 0.3,
-        "beam_size": 1,
-        "vad_parameters": {},
+        "threads": 0,
     },
 }
 
@@ -55,7 +54,9 @@ DEFAULT_TOML_CONTENT = """\
 [model]
 # Modelo de Whisper a usar. Opciones: tiny, base, small, medium, large-v2, large-v3
 name = "tiny"
-# Si falla la ejecución con GPU/CUDA, se descargará y usará automáticamente la versión de CPU
+# Motor a usar: "auto" detecta GPU NVIDIA; "cuda" fuerza GPU; "cpu" fuerza CPU.
+device = "auto"
+# Si falla la ejecución con GPU/CUDA, se usará automáticamente la versión de CPU
 use_cpu_fallback = false
 
 [audio]
@@ -101,11 +102,8 @@ language = ""
 prompt = "Nota técnica. Testing code, PRs, backend logs. Spanglish mode."
 # Mínimo de segundos de audio para transcribir (evita transcribir ruido)
 min_duration = 0.3
-# Tamaño del beam para la transcripción (1 = más rápido, más = más preciso)
-beam_size = 1
-# Parámetros del VAD (Voice Activity Detection) de faster-whisper
-# Ejemplo: { min_silence_duration_ms = 500, speech_pad_ms = 200 }
-vad_parameters = {}
+# Hilos de CPU para la transcripción. 0 = automático (todos los núcleos).
+threads = 0
 """
 
 

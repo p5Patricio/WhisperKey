@@ -1,11 +1,11 @@
 """End-to-end integration tests for the dictation pipeline.
 
 These tests wire together the real components with heavy mocking of external
-resources (audio hardware, whisper.cpp subprocess, clipboard, platform) to
+resources (audio hardware, resident whisper-server, clipboard, platform) to
 verify the full path:
 
     hotkey press -> audio capture -> audio queue -> transcription worker ->
-    stdout parsing -> text injection -> history entry.
+    server.transcribe -> text cleanup -> text injection -> history entry.
 """
 
 from __future__ import annotations
@@ -24,6 +24,21 @@ import pytest
 from whisperkey import audio, hotkeys, injection, transcription
 from whisperkey.history import get_entries
 from whisperkey.state import AppState
+
+
+class FakeServer:
+    """Stand-in for the resident engine.WhisperServer."""
+
+    def __init__(self, text: str) -> None:
+        self.text = text
+        self.calls: list[dict[str, Any]] = []
+
+    def transcribe(self, wav_path, *, prompt: str = "", language: str | None = None) -> str:
+        self.calls.append({"prompt": prompt, "language": language})
+        return self.text
+
+    def stop(self) -> None:
+        pass
 
 
 @pytest.fixture
@@ -77,7 +92,11 @@ def e2e_mocks(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch):
         def inject(self, frames: int = 1024) -> None:
             if not self._started or self.callback is None:
                 return
-            data = np.zeros((frames, self.channels), dtype=self.dtype)
+            # Non-silent tone so the transcription energy gate does not skip it.
+            mono = 0.2 * np.sin(
+                2 * np.pi * 220 * np.linspace(0, frames / 16000, frames, endpoint=False)
+            )
+            data = np.tile(mono.reshape(-1, 1), (1, self.channels)).astype(self.dtype)
             self.callback(data, frames, None, None)
 
     monkeypatch.setattr("sounddevice.InputStream", FakeInputStream)
@@ -162,7 +181,7 @@ class TestEndToEndDictation:
         }
 
         state = AppState(audio_queue_maxsize=100)
-        state.set_model("tiny")
+        state.set_model(FakeServer("integrated test result"))
         overlay = MagicMock()
         sounds = MagicMock()
 
@@ -211,10 +230,6 @@ class TestEndToEndDictation:
 
         assert injected_by_worker
         assert "integrated test result" in injected_by_worker
-        assert e2e_mocks["commands_run"]
-        assert pathlib.Path(e2e_mocks["commands_run"][0][0]).name == "main.exe"
-        assert "-p" not in e2e_mocks["commands_run"][0]
-        assert "--prompt" not in e2e_mocks["commands_run"][0]
 
     def test_history_records_transcription(self, e2e_mocks: dict, monkeypatch: pytest.MonkeyPatch) -> None:
         config = {
@@ -226,7 +241,7 @@ class TestEndToEndDictation:
         }
 
         state = AppState(audio_queue_maxsize=100)
-        state.set_model("tiny")
+        state.set_model(FakeServer("integrated test result"))
         sounds = MagicMock()
         overlay = MagicMock()
 

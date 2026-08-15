@@ -450,13 +450,13 @@ class SettingsGUI:
         assert ctk is not None
         try:
             model_name = _MODEL_DISPLAY_TO_CFG.get(self._model_combo.get(), "auto")
-            device_name = self._config.get("model", {}).get("device", "cuda")
+            device_name = self._config.get("model", {}).get("device", "auto")
             compute_type = self._config.get("model", {}).get("compute_type", "int8_float16")
 
             selected_audio_device = self._device_audio_combo.get()
             audio_device_val = "" if selected_audio_device == "Predeterminado del sistema" else selected_audio_device
 
-            new_config = {
+            updated_values = {
                 "model": {
                     "name": model_name,
                     "device": device_name,
@@ -481,7 +481,10 @@ class SettingsGUI:
                     "font_size": int(self._font_size.get()),
                 },
             }
+            new_config = config_module._deep_merge(self._config, updated_values)
             config_module.write_config(config_module.get_config_path(), new_config)
+            self._config = new_config
+
 
             # Sincronizar estado de sonido inmediatamente
             from whisperkey import sounds

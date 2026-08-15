@@ -220,3 +220,27 @@ class TestStartListener:
         on_press(kb.Key.f11)
         assert state.get_load_requested() is False
         assert state.get_unload_requested() is False
+
+    def test_load_unload_model_callbacks_invoked(self, listener_deps: tuple) -> None:
+        state, sounds, overlay, config, captured_callbacks, _ = listener_deps
+        on_load_mock = MagicMock()
+        on_unload_mock = MagicMock()
+        listener = hotkeys.start_listener(
+            state, config, overlay, sounds,
+            on_load=on_load_mock,
+            on_unload=on_unload_mock,
+        )
+        on_press = captured_callbacks["on_press"]
+
+        # When model is loaded, pressing load_model_key triggers unload
+        on_press(kb.Key.f11)
+        assert state.get_unload_requested() is True
+        on_unload_mock.assert_called_once()
+        on_load_mock.assert_not_called()
+
+        # When model is None, pressing load_model_key triggers load
+        state.clear_model()
+        on_press(kb.Key.f11)
+        assert state.get_load_requested() is True
+        on_load_mock.assert_called_once()
+
