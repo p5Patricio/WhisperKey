@@ -1,16 +1,23 @@
 # -*- mode: python ; coding: utf-8 -*-
+from PyInstaller.utils.hooks import collect_all
+
+datas = [('C:/Users/Usuario/Documents/WhisperKey/assets/icons', 'assets/icons'), ('C:/Users/Usuario/Documents/WhisperKey/assets/logo.png', 'assets'), ('C:/Users/Usuario/Documents/WhisperKey/build/engine-cpu/Release', 'assets/bin')]
+binaries = []
+hiddenimports = ['whisperkey.platform.windows', 'whisperkey.platform.linux', 'whisperkey.platform.macos', 'whisperkey.engine', 'whisperkey.splash', 'whisperkey.settings_gui', 'whisperkey.onboarding', 'whisperkey.updater']
+tmp_ret = collect_all('customtkinter')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 
 a = Analysis(
-    ['C:\\Users\\Usuario\\Documents\\WhisperKey\\whisperkey\\__main__.py'],
+    ['C:/Users/Usuario/Documents/WhisperKey/whisperkey/__main__.py'],
     pathex=[],
-    binaries=[],
-    datas=[('assets', 'assets'), ('config.toml', '.')],
-    hiddenimports=['whisperkey.platform.windows', 'whisperkey.platform.linux', 'whisperkey.platform.macos', 'whisperkey.splash', 'whisperkey.settings_gui', 'whisperkey.onboarding', 'whisperkey.updater'],
+    binaries=binaries,
+    datas=datas,
+    hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=['tests', 'docs', 'notebooks', 'torch.testing', 'torch.utils.benchmark', 'torch.utils.tensorboard', 'torch.utils.cpp_extension', 'torch.utils.mobile_optimizer', 'torch.utils.dlpack', 'IPython', 'matplotlib', 'pytest'],
+    excludes=['tests', 'docs', 'notebooks', 'IPython', 'matplotlib', 'pytest', 'torch', 'torchaudio', 'torchvision', 'onnxruntime', 'ctranslate2', 'faster_whisper', 'transformers'],
     noarchive=False,
     optimize=0,
 )
@@ -32,7 +39,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['C:\\Users\\Usuario\\Documents\\WhisperKey\\assets\\icons\\app.ico'],
+    icon=['C:/Users/Usuario/Documents/WhisperKey/assets/icons/app.ico'],
 )
 coll = COLLECT(
     exe,

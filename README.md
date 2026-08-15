@@ -52,37 +52,41 @@ WhisperKey funciona con **cualquier aplicación de escritorio**:
 
 ---
 
-## 🚀 Instalación
+## 🚀 Instalación (Versión C++ / Whisper.cpp)
 
-**Requisitos**: Python 3.12+, Windows 10/11 (Linux y macOS también soportados), GPU NVIDIA recomendada.
+Esta rama (`feature/whisper-cpp-migration`) utiliza el motor nativo de C++ **Whisper.cpp**, lo que proporciona importantes ventajas de distribución:
+* **Súper ligero**: El instalador y las dependencias de Python ocupan **menos de 100 MB** en disco (eliminando la dependencia de 3 GB de PyTorch).
+* **Binarios precompilados**: El instalador descarga los archivos binarios (`main.exe`, `ggml.dll`) y el modelo de forma transparente.
+* **Tolerancia a fallos**: Si el binario de GPU CUDA falla o carece de DLLs en tu equipo, la aplicación cambia y descarga automáticamente la versión CPU (AVX2) de respaldo para continuar transcribiendo sin interrupciones.
+
+**Requisitos**: Python 3.12+, Windows 10/11 64-bit (GPU NVIDIA opcional).
 
 ```powershell
-# 1. Clonar el repo
+# 1. Clonar el repo y entrar a la carpeta
 git clone https://github.com/p5Patricio/WhisperKey.git
 cd WhisperKey
+git checkout feature/whisper-cpp-migration
 
-# 2. Correr el instalador gráfico
+# 2. Correr el instalador gráfico (descarga binarios C++ y modelo automáticamente)
 python installer/gui_installer.py
 
-# 3. Ejecutar WhisperKey (sin terminal)
+# 3. Ejecutar WhisperKey (sin ventana de terminal)
 # Opción A: Doble clic en lanzador.vbs
 # Opción B: Desde terminal:
 .venv\Scripts\pythonw.exe -m whisperkey
 ```
 
-El instalador detecta tu GPU automáticamente y configura todo. En el primer uso te guía con un wizard paso a paso.
+El instalador detecta si contás con una GPU NVIDIA y configura los binarios óptimos en `assets/bin/`. En el primer arranque se te guiará con el wizard interactivo de onboarding.
 
-### Requisitos de hardware por modelo
+### Requisitos de hardware por modelo (Formatos GGML)
 
-| Modelo | VRAM GPU | RAM CPU | Velocidad | Calidad |
-|--------|----------|---------|-----------|---------|
-| `tiny` | ~1 GB | ~2 GB | Muy rápido | Básica |
-| `base` | ~1 GB | ~2 GB | Rápido | Buena |
-| `small` | ~2 GB | ~4 GB | Moderado | Muy buena |
-| `medium` | ~5 GB | ~8 GB | Lento | Excelente |
-| `large-v3` | ~10 GB | ~16 GB | Muy lento | La mejor |
-
-> 💡 Con `name = "auto"`, WhisperKey detecta tu hardware y elige el mejor modelo que pueda correr.
+| Modelo | Tamaño del Archivo | RAM Mínima | CPU/GPU Recomendado | Calidad |
+|--------|---------------------|------------|---------------------|---------|
+| `tiny` | ~75 MB | ~512 MB | CPU (AVX2) o GPU | Básica |
+| `base` | ~140 MB | ~1 GB | CPU (AVX2) o GPU | Buena (Recomendado por defecto) |
+| `small` | ~460 MB | ~2 GB | CPU fuerte o GPU | Muy buena |
+| `medium`| ~1.5 GB | ~4 GB | GPU dedicada | Excelente |
+| `large-v3`| ~2.9 GB | ~8 GB | GPU dedicada (VRAM alta) | La mejor |
 
 ---
 
@@ -193,7 +197,7 @@ whisperkey/
 ├── config.py        # carga, validación y detección de hardware
 ├── audio.py         # stream de micrófono (PortAudio via sounddevice)
 ├── hotkeys.py       # listener de teclado (pynput)
-├── transcription.py # modelo Whisper, VAD y worker de transcripción
+├── transcription.py # modelo Whisper.cpp (main.exe), VAD y worker de transcripción
 ├── injection.py     # clipboard + Ctrl+V con preservación de contenido
 ├── overlay.py       # indicador visual (tkinter, siempre encima)
 ├── tray.py          # ícono en system tray (pystray) con menú condicional

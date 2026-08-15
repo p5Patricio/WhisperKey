@@ -55,5 +55,7 @@ config.toml
 openspec/
 .atl/
 
-# C++ binaries (Whisper.cpp)
+# Whisper.cpp binarios descargados
 assets/bin/
+assets/bin-cuda/
+

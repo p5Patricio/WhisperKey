@@ -27,15 +27,9 @@ class MacPlatform(BasePlatform):
         return ("command", "v")
 
     def detect_gpu(self) -> tuple[str, str]:
+        # Apple Silicon: whisper.cpp uses Metal automatically; no torch needed.
         if plat.machine() == "arm64":
-            try:
-                import torch
-
-                if torch.backends.mps.is_available():
-                    return ("mps", "float16")
-            except Exception:
-                # torch no instalado todavía (install.py)
-                return ("mps", "float16")
+            return ("mps", "float16")
         return ("cpu", "int8")
 
     def get_project_root(self) -> Path:

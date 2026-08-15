@@ -43,7 +43,8 @@ class OnboardingWizard:
     def __init__(self, master: tk.Tk | None = None) -> None:
         self._master = master
         self._current_step = 0
-        self._captured_ptt_key: str = "caps_lock"
+        cfg = config_module.load_config()
+        self._captured_ptt_key: str = cfg.get("hotkeys", {}).get("ptt", "f9")
         self._recording_thread: threading.Thread | None = None
         self._stop_recording = threading.Event()
 
@@ -334,23 +335,23 @@ class OnboardingWizard:
         assert ctk is not None
         ctk.CTkLabel(
             self._content,
-            text="Presioná la tecla que querés usar para Push-to-Talk",
+            text="Configurá la tecla para grabar (Push-to-Talk):",
             font=ctk.CTkFont(size=13),
         ).pack(pady=10)
 
         self._hotkey_label = ctk.CTkLabel(
             self._content,
-            text="Esperando...",
+            text=f"Tecla actual: {self._captured_ptt_key.upper()}",
             font=ctk.CTkFont(size=16, weight="bold"),
             text_color="#2B6CB0",
         )
         self._hotkey_label.pack(pady=15)
 
-        self._capture_btn = ctk.CTkButton(self._content, text="Capturar tecla", command=self._capture_ptt)
+        self._capture_btn = ctk.CTkButton(self._content, text="Presioná aquí para cambiar tecla", command=self._capture_ptt)
         self._capture_btn.pack(pady=10)
 
     def _capture_ptt(self) -> None:
-        self._hotkey_label.configure(text="Presioná una tecla...")
+        self._hotkey_label.configure(text="Presioná la nueva tecla en tu teclado...")
         self._capture_btn.configure(state="disabled")
 
         listener: kb.Listener | None = None
@@ -361,9 +362,11 @@ class OnboardingWizard:
                 key_str = key.char
             except AttributeError:
                 key_str = str(key).replace("Key.", "")
+            if key_str is None:
+                key_str = "f9"
             self._captured_ptt_key = key_str
             if self._window is not None:
-                self._window.after(0, lambda: self._hotkey_label.configure(text=f"Capturada: {key_str}"))
+                self._window.after(0, lambda k=key_str: self._hotkey_label.configure(text=f"¡Tecla capturada con éxito: {k.upper()}!"))
                 self._window.after(0, lambda: self._capture_btn.configure(state="normal"))
             if listener is not None:
                 listener.stop()

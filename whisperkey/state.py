@@ -82,13 +82,9 @@ class AppState:
             self.model = model
 
     def clear_model(self) -> None:
-        import torch
-
         with self.lock:
             self.model = None
         gc.collect()
-        torch.cuda.empty_cache()
-        torch.cuda.synchronize()
 
     def reset_recording(self) -> None:
         """Restablece los flags de grabación y vacía la cola de audio.
