@@ -59,3 +59,7 @@ openspec/
 assets/bin/
 assets/bin-cuda/
 
+# Node / Web dependencies
+node_modules/
+web/node_modules/
+
