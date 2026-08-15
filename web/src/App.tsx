@@ -86,6 +86,15 @@ export const App: React.FC = () => {
 
   return (
     <div className="app-root">
+      {/* Fixed Fullscreen Background */}
+      <Threads
+        className="threads-fixed-bg"
+        color={[0.15, 0.55, 1.0]}
+        amplitude={1.8}
+        distance={0.15}
+        enableMouseInteraction={false}
+      />
+
       {/* Header */}
       <header className="site-header">
         <div className="container nav-container">
@@ -115,21 +124,14 @@ export const App: React.FC = () => {
         </div>
       </header>
 
-      {/* Hero Section with React Bits Threads */}
+      {/* Hero Section */}
       <section className="hero-section">
-        <Threads
-          className="threads-bg"
-          color={[0.15, 0.55, 1.0]}
-          amplitude={1.8}
-          distance={0.15}
-          enableMouseInteraction={true}
-        />
-
         <div className="container hero-content">
           <div className="badge">
             <span className="badge-dot"></span>
             <span>Versión <strong>{version}</strong> • 100% Offline • Sin API Keys</span>
           </div>
+
 
           <h1 className="hero-title">
             Dictado por voz local.<br />

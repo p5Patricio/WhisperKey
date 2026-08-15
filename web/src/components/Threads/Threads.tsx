@@ -131,7 +131,7 @@ const Threads: React.FC<ThreadsProps> = ({
   color = [0.15, 0.55, 1.0], // Electric Sapphire Blue
   amplitude = 1.8,
   distance = 0.15,
-  enableMouseInteraction = true,
+  enableMouseInteraction = false,
   className,
   style,
   ...rest
