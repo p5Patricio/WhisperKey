@@ -119,9 +119,9 @@ export const App: React.FC = () => {
       <section className="hero-section">
         <Threads
           className="threads-bg"
-          color={[0.25, 0.85, 0.75]}
-          amplitude={2.4}
-          distance={0}
+          color={[0.15, 0.55, 1.0]}
+          amplitude={1.8}
+          distance={0.15}
           enableMouseInteraction={true}
         />
 
@@ -172,9 +172,9 @@ export const App: React.FC = () => {
               <div className="window-status">
                 {isRecording && (
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                    <span style={{ width: '3px', height: '12px', background: '#20d3a5', borderRadius: '2px', animation: 'pulse 0.6s infinite alternate' }}></span>
-                    <span style={{ width: '3px', height: '18px', background: '#20d3a5', borderRadius: '2px', animation: 'pulse 0.4s infinite alternate 0.2s' }}></span>
-                    <span style={{ width: '3px', height: '10px', background: '#20d3a5', borderRadius: '2px', animation: 'pulse 0.8s infinite alternate 0.4s' }}></span>
+                    <span style={{ width: '3px', height: '12px', background: '#38bdf8', borderRadius: '2px', animation: 'pulse 0.6s infinite alternate' }}></span>
+                    <span style={{ width: '3px', height: '18px', background: '#38bdf8', borderRadius: '2px', animation: 'pulse 0.4s infinite alternate 0.2s' }}></span>
+                    <span style={{ width: '3px', height: '10px', background: '#38bdf8', borderRadius: '2px', animation: 'pulse 0.8s infinite alternate 0.4s' }}></span>
                   </span>
                 )}
                 <span>{demoStatus}</span>
@@ -317,7 +317,7 @@ export const App: React.FC = () => {
               <thead>
                 <tr>
                   <th>Característica</th>
-                  <th style={{ color: 'var(--accent-primary)' }}>WhisperKey</th>
+                  <th style={{ color: 'var(--accent-primary-hover)' }}>WhisperKey</th>
                   <th style={{ color: 'var(--text-muted)' }}>Servicios SaaS / Cloud</th>
                 </tr>
               </thead>
@@ -378,7 +378,7 @@ export const App: React.FC = () => {
             <div className="step-card">
               <div className="step-number">3</div>
               <h3 className="step-title">Presioná F9 y hablá</h3>
-              <p className="step-desc">Colocá el cursor en cualquier aplicación, mantené presionado <code style={{ color: 'var(--accent-primary)' }}>F9</code> y soltalo para transcribir al instante.</p>
+              <p className="step-desc">Colocá el cursor en cualquier aplicación, mantené presionado <code style={{ color: 'var(--accent-cyan)' }}>F9</code> y soltalo para transcribir al instante.</p>
             </div>
           </div>
         </div>

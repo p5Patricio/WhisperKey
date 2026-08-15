@@ -10,7 +10,6 @@ interface ThreadsProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'color
   enableMouseInteraction?: boolean;
 }
 
-
 const vertexShader = `
 attribute vec2 position;
 attribute vec2 uv;
@@ -33,9 +32,9 @@ uniform vec2 uMouse;
 
 #define PI 3.1415926538
 
-const int u_line_count = 40;
-const float u_line_width = 7.0;
-const float u_line_blur = 10.0;
+const int u_line_count = 38;
+const float u_line_width = 6.0;
+const float u_line_blur = 9.0;
 
 float Perlin2D(vec2 P) {
     vec2 Pi = floor(P);
@@ -69,9 +68,9 @@ float lineFn(vec2 st, float width, float perc, float offset, vec2 mouse, float t
     float amplitude_normal = smoothstep(split_point, 0.7, st.x);
     float amplitude_strength = 0.5;
     float finalAmplitude = amplitude_normal * amplitude_strength
-                           * amplitude * (1.0 + (mouse.y - 0.5) * 0.2);
+                           * amplitude * (1.0 + (mouse.y - 0.5) * 0.25);
 
-    float time_scaled = time / 10.0 + (mouse.x - 0.5) * 1.0;
+    float time_scaled = time / 9.0 + (mouse.x - 0.5) * 1.0;
     float blur = smoothstep(split_point, split_point + 0.05, st.x) * perc;
 
     float xnoise = mix(
@@ -129,9 +128,9 @@ void main() {
 `;
 
 const Threads: React.FC<ThreadsProps> = ({
-  color = [0.25, 0.85, 0.75],
-  amplitude = 2.4,
-  distance = 0,
+  color = [0.15, 0.55, 1.0], // Electric Sapphire Blue
+  amplitude = 1.8,
+  distance = 0.15,
   enableMouseInteraction = true,
   className,
   style,
@@ -149,7 +148,7 @@ const Threads: React.FC<ThreadsProps> = ({
 
     let renderer: Renderer;
     try {
-      renderer = new Renderer({ alpha: true });
+      renderer = new Renderer({ alpha: true, dpr: Math.min(window.devicePixelRatio || 1, 2) });
     } catch (e) {
       console.warn('WebGL not supported:', e);
       return;
@@ -179,14 +178,11 @@ const Threads: React.FC<ThreadsProps> = ({
 
     const mesh = new Mesh(gl, { geometry, program });
 
-    const MAX_RENDER_DIM = 1920;
     function resize() {
-      const { clientWidth, clientHeight } = container;
-      const baseDpr = Math.min(window.devicePixelRatio || 1, 2);
-      const longestSide = Math.max(clientWidth, clientHeight) * baseDpr;
-      const dpr = longestSide > MAX_RENDER_DIM ? (baseDpr * MAX_RENDER_DIM) / longestSide : baseDpr;
-      renderer.dpr = dpr;
-      renderer.setSize(clientWidth, clientHeight);
+      if (!container) return;
+      const width = container.clientWidth || window.innerWidth;
+      const height = container.clientHeight || window.innerHeight;
+      renderer.setSize(width, height);
       if (program && program.uniforms) {
         program.uniforms.iResolution.value.r = gl.canvas.width;
         program.uniforms.iResolution.value.g = gl.canvas.height;
@@ -194,8 +190,6 @@ const Threads: React.FC<ThreadsProps> = ({
       }
     }
 
-    const resizeObserver = new ResizeObserver(resize);
-    resizeObserver.observe(container);
     window.addEventListener('resize', resize);
     resize();
 
@@ -204,15 +198,17 @@ const Threads: React.FC<ThreadsProps> = ({
 
     function handleMouseMove(e: MouseEvent) {
       const rect = container.getBoundingClientRect();
-      const x = (e.clientX - rect.left) / rect.width;
-      const y = 1.0 - (e.clientY - rect.top) / rect.height;
+      if (rect.width === 0 || rect.height === 0) return;
+      const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      const y = Math.max(0, Math.min(1, 1.0 - (e.clientY - rect.top) / rect.height));
       targetMouse = [x, y];
     }
     function handleMouseLeave() {
       targetMouse = [0.5, 0.5];
     }
-    container.addEventListener('mousemove', handleMouseMove);
-    container.addEventListener('mouseleave', handleMouseLeave);
+
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
+    document.addEventListener('mouseleave', handleMouseLeave);
 
     let isVisible = true;
     const intersectionObserver = new IntersectionObserver(
@@ -251,11 +247,10 @@ const Threads: React.FC<ThreadsProps> = ({
 
     return () => {
       if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
-      resizeObserver.disconnect();
       intersectionObserver.disconnect();
       window.removeEventListener('resize', resize);
-      container.removeEventListener('mousemove', handleMouseMove);
-      container.removeEventListener('mouseleave', handleMouseLeave);
+      window.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseleave', handleMouseLeave);
       if (container.contains(gl.canvas)) container.removeChild(gl.canvas);
       gl.getExtension('WEBGL_lose_context')?.loseContext();
     };
