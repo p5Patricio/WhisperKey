@@ -26,7 +26,7 @@
 - [ ] Config survives uninstall/reinstall
 
 ### 4. Whisper.cpp Binaries
-- [ ] `assets\bin\main.exe` exists after installation
+- [ ] `assets\bin\whisper-server.exe` exists after installation
 - [ ] `assets\bin\cublas64_12.dll` exists (if CUDA build)
 - [ ] `assets\bin\whisper.dll` exists
 - [ ] Transcription works with whisper.cpp
@@ -72,3 +72,11 @@
 - [ ] App launches in < 5 seconds
 - [ ] Model loads in < 10 seconds
 - [ ] Transcription latency < 2 seconds
+
+### 11. Landing Page (web/)
+- [ ] Scroll from hero through footer — Threads background stays fixed, doesn't scroll away
+- [ ] "Descargar .exe" button resolves to a real, downloading asset (not a 404)
+- [ ] Hero badge shows the live version fetched from GitHub (not the hardcoded fallback)
+- [ ] All nav links scroll to the correct section, including Cómo Empezar and Documentación
+- [ ] Responsive check at 375px width — no horizontal overflow, cards stack to 1 column
+- [ ] Responsive check at 768px/1024px width — nav doesn't wrap or overflow

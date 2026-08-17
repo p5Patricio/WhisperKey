@@ -4,12 +4,12 @@
 
 # WhisperKey
 
-Dictado por voz local, sin nube, bilingüe español/inglés. Apretás una tecla, hablás, y el texto aparece donde estés escribiendo. Usa OpenAI Whisper corriendo en tu GPU — tu voz nunca sale de tu computadora.
+Dictado por voz local, sin nube, bilingüe español/inglés. Apretás una tecla, hablás, y el texto aparece donde estés escribiendo. Corre un motor de Whisper en C++ (whisper.cpp) directamente en tu CPU — con soporte opcional de GPU NVIDIA — así que tu voz nunca sale de tu computadora.
 
 ![Python](https://img.shields.io/badge/python-3.12+-blue)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Status](https://img.shields.io/badge/status-Fase%203%20%E2%9C%85-brightgreen)
+![Status](https://img.shields.io/badge/status-Fase%204%20%E2%9C%85-brightgreen)
 ![GitHub release](https://img.shields.io/github/v/release/p5Patricio/WhisperKey)
 
 ---
@@ -52,31 +52,32 @@ WhisperKey funciona con **cualquier aplicación de escritorio**:
 
 ---
 
-## 🚀 Instalación (Versión C++ / Whisper.cpp)
+## 🚀 Instalación
 
-Esta rama (`feature/whisper-cpp-migration`) utiliza el motor nativo de C++ **Whisper.cpp**, lo que proporciona importantes ventajas de distribución:
-* **Súper ligero**: El instalador y las dependencias de Python ocupan **menos de 100 MB** en disco (eliminando la dependencia de 3 GB de PyTorch).
-* **Binarios precompilados**: El instalador descarga los archivos binarios (`main.exe`, `ggml.dll`) y el modelo de forma transparente.
+WhisperKey utiliza el motor nativo de C++ **Whisper.cpp**, lo que proporciona importantes ventajas de distribución:
+* **Súper ligero**: El instalador pesa **~28 MB** — nada que ver con los +3 GB que pedía la versión anterior basada en PyTorch.
+* **Binarios precompilados**: El instalador descarga los archivos binarios (`whisper-server.exe`, `ggml.dll`) y el modelo de forma transparente.
 * **Tolerancia a fallos**: Si el binario de GPU CUDA falla o carece de DLLs en tu equipo, la aplicación cambia y descarga automáticamente la versión CPU (AVX2) de respaldo para continuar transcribiendo sin interrupciones.
 
-**Requisitos**: Python 3.12+, Windows 10/11 64-bit (GPU NVIDIA opcional).
+**Requisitos**: Windows 10/11 64-bit (GPU NVIDIA opcional).
+
+### Para usuarios
+
+1. Descargá `WhisperKey-Setup.exe` desde la [página de Releases](https://github.com/p5Patricio/WhisperKey/releases) del proyecto.
+2. Ejecutalo — es un instalador de Windows (Inno Setup), no requiere Python ni pasos manuales.
+3. En el primer arranque, el wizard de onboarding detecta tu hardware (CPU/GPU), prueba el micrófono y te deja configurar el hotkey.
+
+### Para desarrolladores
+
+Si querés compilarlo vos mismo:
 
 ```powershell
-# 1. Clonar el repo y entrar a la carpeta
 git clone https://github.com/p5Patricio/WhisperKey.git
 cd WhisperKey
-git checkout feature/whisper-cpp-migration
-
-# 2. Correr el instalador gráfico (descarga binarios C++ y modelo automáticamente)
-python installer/gui_installer.py
-
-# 3. Ejecutar WhisperKey (sin ventana de terminal)
-# Opción A: Doble clic en lanzador.vbs
-# Opción B: Desde terminal:
-.venv\Scripts\pythonw.exe -m whisperkey
+installer\build.bat
 ```
 
-El instalador detecta si contás con una GPU NVIDIA y configura los binarios óptimos en `assets/bin/`. En el primer arranque se te guiará con el wizard interactivo de onboarding.
+Esto corre PyInstaller + Inno Setup y genera `dist\WhisperKey-Setup.exe`.
 
 ### Requisitos de hardware por modelo (Formatos GGML)
 
@@ -147,7 +148,7 @@ Los cambios se aplican al reiniciar WhisperKey.
 
 - **100% offline** — ningún audio, metadato ni texto sale de tu máquina
 - **Sin cuentas** — no necesitás login, API key ni suscripción
-- **Sin nube** — Whisper corre localmente en tu GPU
+- **Sin nube** — Whisper corre localmente en tu CPU o GPU, nunca en un servidor
 - **Código abierto (MIT)** — podés auditar cada línea
 
 ---
@@ -197,7 +198,7 @@ whisperkey/
 ├── config.py        # carga, validación y detección de hardware
 ├── audio.py         # stream de micrófono (PortAudio via sounddevice)
 ├── hotkeys.py       # listener de teclado (pynput)
-├── transcription.py # modelo Whisper.cpp (main.exe), VAD y worker de transcripción
+├── transcription.py # modelo Whisper.cpp (whisper-server.exe), VAD y worker de transcripción
 ├── injection.py     # clipboard + Ctrl+V con preservación de contenido
 ├── overlay.py       # indicador visual (tkinter, siempre encima)
 ├── tray.py          # ícono en system tray (pystray) con menú condicional
@@ -234,6 +235,7 @@ whisperkey/
 - **Fase 1** ✅ — Reliability & Thread Safety
 - **Fase 2** ✅ — Cross-platform (Windows / Linux / macOS)
 - **Fase 3** ✅ — GUI Installer + Branding profesional + Historial + Autostart
+- **Fase 4** ✅ — Motor C++ nativo (whisper.cpp/GGML) + Instalador profesional (Inno Setup) + Auto-updater
 
 ---
 

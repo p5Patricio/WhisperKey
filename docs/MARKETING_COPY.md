@@ -1,4 +1,4 @@
-# WisprLocal — Marketing Copy
+# WhisperKey — Marketing Copy
 
 > Documento de copy para releases, redes sociales y comunicaciones del proyecto.
 
@@ -10,14 +10,14 @@
 
 Variantes:
 - *"Hablá, transcribí, pegá. Todo en tu máquina."*
-- *"Whisper en tu GPU, sin enviar nada a internet."*
+- *"Whisper corriendo en tu máquina, sin enviar nada a internet."*
 - *"El dictado profesional que no te espía."*
 
 ---
 
 ## 2. Elevator Pitch (30 segundos)
 
-WisprLocal es una aplicación de escritorio que convierte tu voz en texto en tiempo real usando modelos de IA locales (OpenAI Whisper). Funciona 100% offline: tu voz nunca sale de tu computadora. Soporta Spanglish técnico, se integra con cualquier aplicación vía clipboard, y gestiona tu VRAM inteligentemente para que puedas usarla mientras jugás o trabajás con gráficos pesados.
+WhisperKey es una aplicación de escritorio que convierte tu voz en texto en tiempo real usando modelos de IA locales (OpenAI Whisper). Funciona 100% offline: tu voz nunca sale de tu computadora. Soporta Spanglish técnico, se integra con cualquier aplicación vía clipboard, y gestiona tu VRAM inteligentemente para que puedas usarla mientras jugás o trabajás con gráficos pesados.
 
 ---
 
@@ -41,26 +41,26 @@ WisprLocal es una aplicación de escritorio que convierte tu voz en texto en tie
 
 ---
 
-## 4. GitHub Release Notes (v1.1.0)
+## 4. GitHub Release Notes (v1.2.0)
 
 ### What's New
 
 **GUI Installer + Branding Profesional**
 
-Esta release transforma WisprLocal de un script de Python a una aplicación de escritorio completa:
+Esta release transforma WhisperKey de un script de Python a una aplicación de escritorio completa:
 
-- 🎨 **Instalador gráfico standalone** — wizard de 5 pasos con detección automática de GPU/CPU
+- 🎨 **Instalador profesional (Inno Setup)** — `installer\build.bat` corre PyInstaller + Inno Setup y genera `WhisperKey-Setup.exe`, con auto-update silencioso incorporado
 - 🚀 **Onboarding interactivo** — primer uso guiado con test de micrófono, captura de hotkeys en vivo, y tutorial rápido
 - ⚙️ **Configuración visual** — ventana con tabs para modelo, audio, hotkeys y overlay
 - 💫 **Splash screen** — feedback visual durante la carga del modelo Whisper
 - 🔔 **Bandeja del sistema mejorada** — íconos reales con estados coloridos (idle, loading, ready, error)
 - 🔄 **Auto-updater** — verifica automáticamente si hay nuevas versiones en GitHub Releases
-- 📦 **Build con PyInstaller** — `python tools/build.py` genera una distribución portable
+- ⚡ **Motor C++ nativo (whisper.cpp/GGML)** — motor CPU incluido en el instalador (~8 MB) que funciona out-of-the-box; el motor CUDA se descarga automáticamente on-demand para usuarios con GPU NVIDIA; `whisper-server.exe` corre como servidor HTTP local residente para transcripciones repetidas de baja latencia
 - 🎯 **Branding completo** — íconos .ico (Windows), .icns (macOS), .png (Linux) generados programáticamente
 
 **Cross-platform (Windows / Linux / macOS)**
 
-- Abstracción de plataforma completa en `wispr/platform/`
+- Abstracción de plataforma completa en `whisperkey/platform/`
 - Atajos de pegado adaptativos (Ctrl+V / Cmd+V)
 - Beep nativo según SO
 - Lanzadores nativos (.vbs, .sh, .app)
@@ -83,10 +83,14 @@ Esta release transforma WisprLocal de un script de Python a una aplicación de e
 
 ### Install from source
 
+**Para usuarios finales**: descargá `WhisperKey-Setup.exe` desde la [página de Releases](https://github.com/p5Patricio/WhisperKey/releases).
+
+**Para desarrolladores**:
+
 ```bash
-git clone https://github.com/p5Patricio/WisprLocal.git
-cd WisprLocal
-python installer/gui_installer.py
+git clone https://github.com/p5Patricio/WhisperKey.git
+cd WhisperKey
+installer\build.bat
 ```
 
 ---
@@ -96,7 +100,7 @@ python installer/gui_installer.py
 **Tweet 1 (hook):**
 > Estoy cansado de que cada app de dictado me pida "conectá tu cuenta" y mande mi voz a quién sabe dónde.
 >
-> Así que construí WisprLocal: dictado por voz 100% offline, con Whisper corriendo en TU GPU.
+> Así que construí WhisperKey: dictado por voz 100% offline, con Whisper corriendo en TU máquina.
 >
 > Open source. Sin suscripción. Sin nube. 🧵
 
@@ -129,11 +133,11 @@ python installer/gui_installer.py
 > Cuando terminás: "Cargar modelo". Listo en 10 segundos.
 
 **Tweet 6 (CTA):**
-> WisprLocal v1.1.0 ya está disponible.
+> WhisperKey v1.2.0 ya está disponible.
 >
 > GUI installer, onboarding wizard, settings visual, auto-updater, branding profesional.
 >
-> 👉 github.com/p5Patricio/WisprLocal
+> 👉 github.com/p5Patricio/WhisperKey
 >
 > ⭐ Si te sirve, una estrella ayuda un montón.
 
@@ -141,26 +145,26 @@ python installer/gui_installer.py
 
 ## 6. LinkedIn Post
 
-> **Lancé WisprLocal v1.1.0 — Dictado por voz 100% offline con Whisper**
+> **Lancé WhisperKey v1.2.0 — Dictado por voz 100% offline con Whisper**
 >
 > Durante los últimos meses transformé un script de Python de una sola noche en una aplicación de escritorio profesional, cross-platform, con GUI completa.
 >
 > **¿Qué resuelve?**
-> Las herramientas de dictado existentes o mandan tu voz a la nube (privacidad cero) o no entienden Spanglish técnico. WisprLocal corre Whisper localmente en tu GPU, transcribe en tiempo real, e inyecta el texto donde estés escribiendo.
+> Las herramientas de dictado existentes o mandan tu voz a la nube (privacidad cero) o no entienden Spanglish técnico. WhisperKey corre Whisper localmente en tu equipo, transcribe en tiempo real, e inyecta el texto donde estés escribiendo.
 >
-> **Lo nuevo en v1.1.0:**
-> • Instalador gráfico con detección automática de hardware
+> **Lo nuevo en v1.2.0:**
+> • Instalador profesional (Inno Setup), con onboarding que detecta tu hardware automáticamente
 > • Wizard de primer uso con test de micrófono y captura de hotkeys
 > • Configuración visual con pestañas
 > • Splash screen durante carga del modelo
 > • Auto-updater desde GitHub Releases
 > • Iconos y branding profesionales
 >
-> **Stack:** Python 3.12, faster-whisper, PyTorch CUDA, customtkinter, pystray, pynput.
+> **Stack:** Python 3.12, whisper.cpp (motor C++/GGML), customtkinter, pystray, pynput.
 >
 > Es 100% open source (MIT). Si te interesa la intersección de IA local, privacidad y UX de escritorio, pasá a ver el repo.
 >
-> 👉 github.com/p5Patricio/WisprLocal
+> 👉 github.com/p5Patricio/WhisperKey
 >
 > #OpenSource #MachineLearning #Python #Whisper #VoiceToText #PrivacyFirst #LocalAI
 
@@ -168,12 +172,12 @@ python installer/gui_installer.py
 
 ## 7. Product Hunt (futuro)
 
-**Name:** WisprLocal
+**Name:** WhisperKey
 
 **Tagline:** Dictado por voz local con Whisper. Sin nube. Sin suscripción. Spanglish nativo.
 
 **Description:**
-WisprLocal convierte tu voz en texto en tiempo real usando OpenAI Whisper corriendo 100% en tu máquina. Sin enviar audio a ningún servidor. Sin suscripciones. Sin cuentas.
+WhisperKey convierte tu voz en texto en tiempo real usando OpenAI Whisper corriendo 100% en tu máquina. Sin enviar audio a ningún servidor. Sin suscripciones. Sin cuentas.
 
 Soporta Spanglish técnico sin configurar idioma. Inyecta el texto automáticamente donde estés escribiendo. Gestiona tu VRAM para que puedas usarla mientras jugás o trabajás.
 
@@ -185,4 +189,4 @@ Con GUI installer, onboarding wizard, settings visual, splash screen, auto-updat
 
 ## 8. One-liner para la bio / descripción corta
 
-> WisprLocal — Dictado por voz local con Whisper. Sin nube. Spanglish nativo. 100% privado. 🎙️➡️⌨️
+> WhisperKey — Dictado por voz local con Whisper. Sin nube. Spanglish nativo. 100% privado. 🎙️➡️⌨️

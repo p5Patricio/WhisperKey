@@ -46,7 +46,7 @@ venv.bak/
 .DS_Store
 Thumbs.db
 
-# WisprLocal — archivos generados o locales
+# WhisperKey — archivos generados o locales
 lanzador.vbs
 config.toml
 *.lnk
