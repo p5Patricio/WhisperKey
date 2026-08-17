@@ -108,6 +108,8 @@ export const App: React.FC = () => {
               <li><a href="#features" className="nav-link">Características</a></li>
               <li><a href="#demo" className="nav-link">Demo</a></li>
               <li><a href="#comparativa" className="nav-link">Comparativa</a></li>
+              <li><a href="#como-empezar" className="nav-link">Cómo Empezar</a></li>
+              <li><a href="#documentacion" className="nav-link">Documentación</a></li>
               <li><a href="#faq" className="nav-link">Preguntas Frecuentes</a></li>
             </ul>
           </nav>
@@ -356,7 +358,7 @@ export const App: React.FC = () => {
       </section>
 
       {/* Steps */}
-      <section className="section">
+      <section id="como-empezar" className="section">
         <div className="container">
           <div className="section-header">
             <div className="section-tag">Listo en 60 Segundos</div>
@@ -368,19 +370,19 @@ export const App: React.FC = () => {
             <div className="step-card">
               <div className="step-number">1</div>
               <h3 className="step-title">Descargá el instalador</h3>
-              <p className="step-desc">Descargá el archivo <code style={{ color: 'var(--accent-cyan)' }}>WhisperKey-Setup.exe</code> (~28 MB) desde la sección de descargas.</p>
+              <p className="step-desc">Hacé clic en "Descargar .exe" arriba o buscá el último release en GitHub. Bajás <code style={{ color: 'var(--accent-cyan)' }}>WhisperKey-Setup.exe</code> (~28 MB) — sin cuentas, sin tarjetas.</p>
             </div>
 
             <div className="step-card">
               <div className="step-number">2</div>
               <h3 className="step-title">Seguí el Onboarding</h3>
-              <p className="step-desc">El asistente detectará automáticamente tu hardware (GPU NVIDIA o CPU) y descargará el modelo óptimo.</p>
+              <p className="step-desc">Al abrir WhisperKey por primera vez, un asistente detecta tu hardware (GPU NVIDIA o CPU), prueba tu micrófono en segundos y te deja capturar tus propios hotkeys.</p>
             </div>
 
             <div className="step-card">
               <div className="step-number">3</div>
-              <h3 className="step-title">Presioná F9 y hablá</h3>
-              <p className="step-desc">Colocá el cursor en cualquier aplicación, mantené presionado <code style={{ color: 'var(--accent-cyan)' }}>F9</code> y soltalo para transcribir al instante.</p>
+              <h3 className="step-title">Elegí tu modo: F9 o F10</h3>
+              <p className="step-desc">Mantené presionado <code style={{ color: 'var(--accent-cyan)' }}>F9</code> para dictar mientras hablás (Push-to-Talk), o presioná <code style={{ color: 'var(--accent-cyan)' }}>F10</code> una vez para activar el modo Toggle y volvé a presionarlo para terminar.</p>
             </div>
           </div>
         </div>
@@ -423,6 +425,72 @@ export const App: React.FC = () => {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Documentation */}
+      <section id="documentacion" className="section">
+        <div className="container">
+          <div className="section-header">
+            <div className="section-tag">Soporte y Configuración</div>
+            <h2 className="section-title">Documentación</h2>
+            <p className="section-subtitle">
+              Todo lo que necesitás para configurar, personalizar y resolver problemas — sin salir de la página.
+            </p>
+          </div>
+
+          <div className="features-grid">
+            <div className="feature-card">
+              <div className="feature-icon">⚙️</div>
+              <h3 className="feature-title">Dónde vive tu configuración</h3>
+              <p className="feature-desc">
+                Todos tus ajustes se guardan en <code style={{ color: 'var(--accent-cyan)' }}>%APPDATA%\WhisperKey\config.toml</code>. Se crea solo, con valores por defecto, la primera vez que abrís la app.
+              </p>
+            </div>
+
+            <div className="feature-card">
+              <div className="feature-icon">⌨️</div>
+              <h3 className="feature-title">Cambiar tus hotkeys</h3>
+              <p className="feature-desc">
+                Clic derecho en el ícono de la bandeja → Configuración → pestaña Hotkeys. Capturá en vivo la combinación que quieras para Push-to-Talk, Toggle o Cargar modelo.
+              </p>
+            </div>
+
+            <div className="feature-card">
+              <div className="feature-icon">🧠</div>
+              <h3 className="feature-title">Elegí tu modelo Whisper</h3>
+              <p className="feature-desc">
+                Desde <em>tiny</em> hasta <em>large-v3</em>, cinco modelos GGML para elegir según tu hardware. Cambialo cuando quieras desde Configuración → Modelo, sin reinstalar nada.
+              </p>
+            </div>
+
+            <div className="feature-card">
+              <div className="feature-icon">🏗️</div>
+              <h3 className="feature-title">Cómo funciona por dentro</h3>
+              <p className="feature-desc">
+                WhisperKey mantiene un servidor <code style={{ color: 'var(--accent-cyan)' }}>whisper-server.exe</code> residente en tu máquina, con un endpoint HTTP local para transcribir sin recargar el modelo en cada dictado. Tu audio se procesa ahí mismo — nunca sale a internet.
+              </p>
+            </div>
+
+            <div className="feature-card">
+              <div className="feature-icon">🛠️</div>
+              <h3 className="feature-title">Troubleshooting rápido</h3>
+              <p className="feature-desc">
+                ¿No graba? Esperá a que el ícono de bandeja esté verde. ¿No inyecta texto? Probá primero en el Bloc de notas — algunas apps con permisos de administrador bloquean la simulación de teclado.
+              </p>
+            </div>
+
+            <div className="feature-card">
+              <div className="feature-icon">📖</div>
+              <h3 className="feature-title">¿Necesitás más detalle?</h3>
+              <p className="feature-desc">
+                Esta página cubre lo esencial. El README en GitHub tiene la arquitectura completa, troubleshooting extendido y la guía para compilar desde código fuente.{' '}
+                <a href={`https://github.com/${REPO}#readme`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-cyan)' }}>
+                  Ver README completo →
+                </a>
+              </p>
+            </div>
           </div>
         </div>
       </section>

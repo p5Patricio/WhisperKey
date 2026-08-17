@@ -130,7 +130,7 @@ body {
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 2rem;
+  gap: 1.25rem;
   list-style: none;
 }
 
@@ -145,6 +145,7 @@ body {
   color: var(--text-secondary);
   font-size: 0.925rem;
   font-weight: 500;
+  white-space: nowrap;
   transition: color 0.2s ease;
 }
 
