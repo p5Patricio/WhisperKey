@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Threads from './components/Threads/Threads';
 
 const REPO = 'p5Patricio/WhisperKey';
-const FALLBACK_VERSION = 'v1.2.0';
+const FALLBACK_VERSION = 'v1.3.0';
 const FALLBACK_DOWNLOAD = `https://github.com/${REPO}/releases/latest/download/WhisperKey-Setup.exe`;
 
 export const App: React.FC = () => {
