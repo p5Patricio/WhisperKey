@@ -12,6 +12,12 @@ from whisperkey.state import AppState
 
 log = logging.getLogger(__name__)
 
+# Gap between capture callbacks that means the stream stalled (sleep, device
+# change) rather than merely ran late.
+_STALL_SECONDS = 4.0
+# Rate-limit the drop warning so a sustained overflow cannot flood the log.
+_DROP_LOG_EVERY = 25
+
 
 def start_stream(state: AppState, config: dict, overlay=None) -> sd.InputStream:
     """Crea e inicia el InputStream de PortAudio.
@@ -43,11 +49,13 @@ def start_stream(state: AppState, config: dict, overlay=None) -> sd.InputStream:
 
     def _callback(indata, frames, time_info, status):  # noqa: ARG001
         nonlocal last_callback_time
-        current_time = time.time()
+        # Monotonic: a wall-clock delta moves with NTP corrections and DST, so
+        # time.time() can trip this watchdog on a perfectly healthy machine.
+        current_time = time.monotonic()
 
-        if last_callback_time > 0 and (current_time - last_callback_time) > 4.0:
-            log.info(
-                "Gran salto de tiempo detectado (%.2fs). Reiniciando estado de grabación.",
+        if last_callback_time > 0 and (current_time - last_callback_time) > _STALL_SECONDS:
+            log.warning(
+                "Captura de audio interrumpida %.2fs. Descartando la grabación en curso.",
                 current_time - last_callback_time,
             )
             state.reset_recording()
@@ -56,15 +64,19 @@ def start_stream(state: AppState, config: dict, overlay=None) -> sd.InputStream:
 
         last_callback_time = current_time
 
-        if state.is_recording():
+        if state.is_capturing():
             try:
                 state.audio_queue.put_nowait(indata.copy())
             except queue.Full:
-                try:
-                    state.audio_queue.get_nowait()
-                    state.audio_queue.put_nowait(indata.copy())
-                except queue.Empty:
-                    pass
+                # Dropping audio is data loss and must never be silent: it
+                # reaches the user as words spliced together mid-sentence.
+                total = state.note_dropped_chunk()
+                if total == 1 or total % _DROP_LOG_EVERY == 0:
+                    log.warning(
+                        "Cola de audio llena: %d chunks descartados. "
+                        "Se está perdiendo audio de la grabación.",
+                        total,
+                    )
 
     stream = sd.InputStream(
         device=device_id,

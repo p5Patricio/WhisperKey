@@ -6,6 +6,7 @@ import logging
 import pathlib
 import sys
 import threading
+from logging.handlers import RotatingFileHandler
 
 from whisperkey import config as config_module
 from whisperkey import sounds
@@ -43,7 +44,11 @@ def main() -> None:
     log_dir.mkdir(parents=True, exist_ok=True)
     log_file = log_dir / "whisperkey.log"
 
-    file_handler = logging.FileHandler(log_file, encoding="utf-8")
+    # Rotating: the app runs for days at a time and an unbounded log file is a
+    # slow disk leak on the user's machine.
+    file_handler = RotatingFileHandler(
+        log_file, maxBytes=1_000_000, backupCount=3, encoding="utf-8"
+    )
     file_handler.setLevel(logging.INFO)
     formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
     file_handler.setFormatter(formatter)
@@ -159,7 +164,7 @@ def main() -> None:
     # 1. Transcription worker daemon
     worker = threading.Thread(
         target=transcription_worker,
-        args=(state, config, inject_text, sounds),
+        args=(state, config, inject_text, sounds, overlay),
         daemon=True,
     )
     worker.start()
