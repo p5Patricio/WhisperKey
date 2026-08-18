@@ -451,7 +451,6 @@ class SettingsGUI:
         try:
             model_name = _MODEL_DISPLAY_TO_CFG.get(self._model_combo.get(), "auto")
             device_name = self._config.get("model", {}).get("device", "auto")
-            compute_type = self._config.get("model", {}).get("compute_type", "int8_float16")
 
             selected_audio_device = self._device_audio_combo.get()
             audio_device_val = "" if selected_audio_device == "Predeterminado del sistema" else selected_audio_device
@@ -460,7 +459,6 @@ class SettingsGUI:
                 "model": {
                     "name": model_name,
                     "device": device_name,
-                    "compute_type": compute_type,
                 },
                 "audio": {
                     "sample_rate": int(self._sample_rate.get()),
