@@ -224,3 +224,83 @@ def test_deep_merge_preserves_unmodified_sections() -> None:
     assert merged["model"]["device"] == "cpu"
     assert merged["app"]["first_run"] is False
 
+
+
+class TestValidation:
+    """The whisper.cpp migration dropped config validation entirely.
+
+    Without it an invalid model name became a 404 at download time and an
+    unsupported channel count silently produced garbled audio.
+    """
+
+    def _config(self, **overrides) -> dict:
+        cfg = config_module._deep_merge(config_module.DEFAULTS, {})
+        for section, values in overrides.items():
+            cfg[section].update(values)
+        return cfg
+
+    def test_defaults_are_valid(self) -> None:
+        config_module._validate(self._config())
+
+    def test_rejects_unknown_model_name(self) -> None:
+        with pytest.raises(ValueError, match="model.name"):
+            config_module._validate(self._config(model={"name": "gigante"}))
+
+    @pytest.mark.parametrize("name", ["auto", "tiny", "base", "small", "medium", "large-v3"])
+    def test_accepts_known_model_names(self, name: str) -> None:
+        config_module._validate(self._config(model={"name": name}))
+
+    def test_rejects_unknown_device(self) -> None:
+        with pytest.raises(ValueError, match="model.device"):
+            config_module._validate(self._config(model={"device": "tpu"}))
+
+    @pytest.mark.parametrize("channels", [0, 3, "dos", 1.5])
+    def test_rejects_invalid_channel_counts(self, channels) -> None:
+        with pytest.raises(ValueError, match="audio.channels"):
+            config_module._validate(self._config(audio={"channels": channels}))
+
+    def test_rejects_low_sample_rate(self) -> None:
+        with pytest.raises(ValueError, match="audio.sample_rate"):
+            config_module._validate(self._config(audio={"sample_rate": 4000}))
+
+    def test_rejects_negative_queue_maxsize(self) -> None:
+        with pytest.raises(ValueError, match="audio.queue_maxsize"):
+            config_module._validate(self._config(audio={"queue_maxsize": -1}))
+
+    def test_rejects_non_positive_min_duration(self) -> None:
+        with pytest.raises(ValueError, match="min_duration"):
+            config_module._validate(self._config(transcription={"min_duration": 0}))
+
+    def test_rejects_negative_threads(self) -> None:
+        with pytest.raises(ValueError, match="threads"):
+            config_module._validate(self._config(transcription={"threads": -2}))
+
+    def test_rejects_beam_size_below_one(self) -> None:
+        with pytest.raises(ValueError, match="beam_size"):
+            config_module._validate(self._config(transcription={"beam_size": 0}))
+
+    def test_rejects_non_string_language(self) -> None:
+        with pytest.raises(ValueError, match="language"):
+            config_module._validate(self._config(transcription={"language": 42}))
+
+
+class TestDefaultTemplate:
+    """write_config only persists keys present in DEFAULT_TOML_CONTENT."""
+
+    def test_template_parses_and_validates(self) -> None:
+        parsed = tomllib.loads(config_module.DEFAULT_TOML_CONTENT)
+        config_module._validate(config_module._deep_merge(config_module.DEFAULTS, parsed))
+
+    def test_template_covers_every_default_key(self) -> None:
+        parsed = tomllib.loads(config_module.DEFAULT_TOML_CONTENT)
+        missing = {
+            f"{section}.{key}"
+            for section, values in config_module.DEFAULTS.items()
+            for key in values
+            if key not in parsed.get(section, {})
+        }
+        assert not missing, f"claves que write_config no podría persistir: {missing}"
+
+    def test_default_model_is_auto(self) -> None:
+        parsed = tomllib.loads(config_module.DEFAULT_TOML_CONTENT)
+        assert parsed["model"]["name"] == "auto"

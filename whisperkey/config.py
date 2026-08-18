@@ -15,10 +15,8 @@ DEFAULTS = {
         "first_run": True,
     },
     "model": {
-        "name": "tiny",
+        "name": "auto",
         "device": "auto",
-        "compute_type": "int8_float16",
-        "use_cpu_fallback": False,
     },
     "audio": {
         "sample_rate": 16000,
@@ -42,9 +40,18 @@ DEFAULTS = {
         "language": "",
         "prompt": "Nota técnica. Testing code, PRs, backend logs. Spanglish mode.",
         "min_duration": 0.3,
+        "max_duration": 600.0,
         "threads": 0,
+        "beam_size": 5,
+        "suppress_non_speech": True,
+        "vad": False,
     },
 }
+
+VALID_MODEL_NAMES = (
+    "auto", "tiny", "base", "small", "medium",
+    "large-v1", "large-v2", "large-v3", "large-v3-turbo",
+)
 
 DEFAULT_TOML_CONTENT = """\
 # WhisperKey — Configuración
@@ -52,12 +59,12 @@ DEFAULT_TOML_CONTENT = """\
 # Los cambios se aplican al reiniciar la aplicación.
 
 [model]
-# Modelo de Whisper a usar. Opciones: tiny, base, small, medium, large-v2, large-v3
-name = "tiny"
+# Modelo de Whisper. Opciones: auto, tiny, base, small, medium, large-v2, large-v3
+# "auto" elige según tu hardware. Para Spanglish, "small" o superior.
+name = "auto"
 # Motor a usar: "auto" detecta GPU NVIDIA; "cuda" fuerza GPU; "cpu" fuerza CPU.
+# Si CUDA falla, la app cae automáticamente a CPU.
 device = "auto"
-# Si falla la ejecución con GPU/CUDA, se usará automáticamente la versión de CPU
-use_cpu_fallback = false
 
 [audio]
 # Frecuencia de muestreo en Hz. No cambiar salvo que tengas problemas de audio.
@@ -102,8 +109,18 @@ language = ""
 prompt = "Nota técnica. Testing code, PRs, backend logs. Spanglish mode."
 # Mínimo de segundos de audio para transcribir (evita transcribir ruido)
 min_duration = 0.3
-# Hilos de CPU para la transcripción. 0 = automático (todos los núcleos).
+# Máximo de segundos por grabación; al alcanzarlo se corta y transcribe.
+max_duration = 600.0
+# Hilos de CPU para la transcripción. 0 = automático (deja 2 núcleos libres
+# para la captura de audio; usar todos los núcleos corta palabras).
 threads = 0
+# Tamaño del beam search. 1 = greedy (más rápido, menos preciso).
+beam_size = 5
+# Suprimir tokens de no-habla (música, aplausos, ruido) en el decoder.
+suppress_non_speech = true
+# Detección de voz (VAD) para recortar silencio antes de transcribir.
+# Descarga un modelo Silero de ~0.9 MB la primera vez que se activa.
+vad = false
 """
 
 
@@ -120,6 +137,60 @@ def _deep_merge(base: dict, override: dict) -> dict:
 
 def _validate(config: dict) -> None:
     """Raise ValueError on invalid config values."""
+
+    model_name = config["model"]["name"]
+    if model_name not in VALID_MODEL_NAMES:
+        raise ValueError(
+            f"model.name debe ser uno de {VALID_MODEL_NAMES}, se recibió: '{model_name}'"
+        )
+
+    valid_devices = ("auto", "cuda", "cpu")
+    if str(config["model"]["device"]).lower() not in valid_devices:
+        raise ValueError(
+            f"model.device debe ser uno de {valid_devices}, "
+            f"se recibió: '{config['model']['device']}'"
+        )
+
+    channels = config["audio"]["channels"]
+    if not isinstance(channels, int) or channels < 1 or channels > 2:
+        raise ValueError(f"audio.channels debe ser 1 o 2, se recibió: {channels}")
+
+    sample_rate = config["audio"]["sample_rate"]
+    if not isinstance(sample_rate, int) or sample_rate < 8000:
+        raise ValueError(
+            f"audio.sample_rate debe ser un entero >= 8000, se recibió: {sample_rate}"
+        )
+
+    queue_maxsize = config["audio"].get("queue_maxsize", 0)
+    if not isinstance(queue_maxsize, int) or queue_maxsize < 0:
+        raise ValueError(
+            f"audio.queue_maxsize debe ser un entero >= 0, se recibió: {queue_maxsize}"
+        )
+
+    tcfg = config["transcription"]
+
+    min_duration = tcfg["min_duration"]
+    if not isinstance(min_duration, (int, float)) or min_duration <= 0:
+        raise ValueError(
+            f"transcription.min_duration debe ser > 0, se recibió: {min_duration}"
+        )
+
+    threads = tcfg.get("threads", 0)
+    if not isinstance(threads, int) or threads < 0:
+        raise ValueError(
+            f"transcription.threads debe ser un entero >= 0 (0 = automático), "
+            f"se recibió: {threads}"
+        )
+
+    beam_size = tcfg.get("beam_size", 5)
+    if not isinstance(beam_size, int) or beam_size < 1:
+        raise ValueError(
+            f"transcription.beam_size debe ser un entero >= 1, se recibió: {beam_size}"
+        )
+
+    language = tcfg.get("language", "")
+    if not isinstance(language, str):
+        raise ValueError("transcription.language debe ser un string ('' = automático)")
 
     valid_positions = ("bottom-right", "bottom-left", "top-right", "top-left")
     if config["overlay"]["position"] not in valid_positions:

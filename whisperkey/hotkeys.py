@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import threading
 
 from typing import Callable
 
@@ -13,10 +14,23 @@ from whisperkey.state import AppState
 
 logger = logging.getLogger(__name__)
 
+
 if os.environ.get("XDG_SESSION_TYPE") == "wayland":
     logger.warning(
         "Wayland detectado. Los atajos globales pueden no funcionar correctamente."
     )
+
+
+def _finish_recording(state: AppState) -> None:
+    """Stop capturing after a short grace window, then close the buffer.
+
+    The last audio block is still in flight on the PortAudio thread when the key
+    comes up. Closing the buffer immediately truncates the final word.
+    """
+    grace = state.begin_stop_grace()
+    timer = threading.Timer(grace, state.put_sentinel)
+    timer.daemon = True
+    timer.start()
 
 _active_keys: set = set()
 _toggle_lock = False
@@ -73,7 +87,7 @@ def start_listener(
         if state.shutdown_event.is_set():
             return
 
-        if state.model is None:
+        if state.get_model() is None:
             if key == toggle_key or key == ptt_key:
                 sounds.play_error()
                 return
@@ -96,14 +110,14 @@ def start_listener(
                 overlay.show_toggle()
                 logger.info("Toggle ON")
             else:
-                state.put_sentinel()
+                _finish_recording(state)
                 sounds.play_stop()
                 overlay.hide()
                 logger.info("Toggle OFF")
 
         # — Load/unload model key —
         if load_model_key is not None and key == load_model_key:
-            if state.model is None:
+            if state.get_model() is None:
                 logger.info("Cargando modelo por hotkey...")
                 state.set_load_requested(True)
                 if on_load is not None:
@@ -122,8 +136,7 @@ def start_listener(
 
         # — PTT: fin push-to-talk —
         if key == ptt_key and state.get_ptt():
-            state.set_ptt(False)
-            state.put_sentinel()
+            _finish_recording(state)
             sounds.play_stop()
             overlay.hide()
 

@@ -107,7 +107,10 @@ class TestStartListener:
         assert state.is_recording() is False
         sounds.play_stop.assert_called_once()
         overlay.hide.assert_called_once()
-        assert state.audio_queue.get_nowait() is None  # sentinel
+        # El sentinel llega tras la ventana de gracia, no en el instante del
+        # release: la cola del audio todavía viene en camino desde PortAudio.
+        assert state.is_capturing() is True
+        assert state.audio_queue.get(timeout=2) is None  # sentinel
 
     def test_toggle_press_toggles_recording(self, listener_deps: tuple) -> None:
         state, sounds, overlay, config, captured_callbacks, _ = listener_deps
