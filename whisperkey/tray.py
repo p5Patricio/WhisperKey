@@ -41,7 +41,7 @@ def _update_tray_icon(icon, state: AppState, config: dict | None = None) -> None
     if state.get_loading():
         icon.icon = _load_icon("tray_loading.png", "yellow")
         icon.title = "WhisperKey \u2014 Cargando modelo..."
-    elif state.model is not None:
+    elif state.get_model() is not None:
         icon.icon = _load_icon("tray_ready.png", "green")
         icon.title = f"WhisperKey \u2014 Listo | PTT: {ptt_key}"
     else:
@@ -91,7 +91,7 @@ def start_tray(
     def _build_menu() -> pystray.Menu:
         """Construye el menú dinámicamente según el estado del modelo."""
         items: list = []
-        if state.model is not None:
+        if state.get_model() is not None:
             items.append(pystray.MenuItem("Descargar modelo", _unload))
         else:
             items.append(pystray.MenuItem("Cargar modelo", _load))
@@ -108,7 +108,7 @@ def start_tray(
         while not state.shutdown_event.is_set():
             if state.get_loading():
                 current = "loading"
-            elif state.model is not None:
+            elif state.get_model() is not None:
                 current = "ready"
             else:
                 current = "idle"
