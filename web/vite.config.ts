@@ -7,7 +7,10 @@ export default defineConfig({
   base: './',
   build: {
     outDir: '../docs',
-    emptyOutDir: false,
+    // true: docs/ pasa a ser salida pura de Vite. Con false, cada build dejaba
+    // el bundle anterior olvidado ahí y se juntaron seis. Todo lo que no genera
+    // Vite vive en web/public/ y se copia en cada build.
+    emptyOutDir: true,
   },
 
 })

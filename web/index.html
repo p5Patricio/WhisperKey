@@ -3,6 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- La barra del navegador acompaña a la navegación negra de la página. -->
+    <meta name="theme-color" content="#000000" />
     <title>WhisperKey — Dictado por voz local, sin nube y bilingüe</title>
     <meta name="description" content="Convierte tu voz en texto en tiempo real con OpenAI Whisper corriendo localmente en tu GPU o CPU. 100% offline, privado, rápido y optimizado para Spanglish técnico." />
     <meta name="keywords" content="Whisper, OpenAI, speech-to-text, dictado por voz, whisper.cpp, transcripción local, offline, GPU, CUDA, Spanglish" />
@@ -12,12 +14,17 @@
     <meta property="og:type" content="website" />
     <meta property="og:title" content="WhisperKey — Dictado por voz local en tu máquina" />
     <meta property="og:description" content="Convierte tu voz en texto en tiempo real con Whisper local. Sin nube, sin suscripciones, 100% privado." />
-    <meta property="og:image" content="assets/logo.png" />
+    <meta property="og:image" content="https://p5patricio.github.io/WhisperKey/assets/logo.png" />
+    <meta property="og:url" content="https://p5patricio.github.io/WhisperKey/" />
+    <meta name="twitter:card" content="summary_large_image" />
 
     <link rel="icon" type="image/png" href="assets/icons/tray_ready.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <!-- Inter sólo como sustituto: en Apple el stack del sistema resuelve a SF Pro
+         y esta hoja ni se usa. Se carga acá, no con @import en el CSS, que bloquea
+         el renderizado hasta que termina de descargarse. -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet" />
   </head>
   <body>
     <div id="root"></div>

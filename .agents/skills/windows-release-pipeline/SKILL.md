@@ -73,8 +73,10 @@ cd web && pnpm install && pnpm build   # writes ../docs
 git add docs web && git commit
 ```
 
-`emptyOutDir: false` — Vite will not clear `docs/`, so stale assets survive
-rebuilds. Check `git status` after building and remove orphans deliberately.
+`emptyOutDir: true` — `docs/` is pure Vite output and is wiped on every build,
+so stale bundles cannot accumulate. Anything that is not generated (favicon,
+icons, logo, the marketing markdown) lives in `web/public/` and is copied in.
+Never put a hand-written file directly into `docs/`: the next build deletes it.
 
 ## Verify the two paths users actually take
 
