@@ -1,532 +1,548 @@
-import React, { useState, useEffect } from 'react';
-import Threads from './components/Threads/Threads';
+import React, { useState, useEffect, useCallback } from 'react';
+
+import pildoraEscuchando from './assets/pill-escuchando.png';
+import pildoraTranscribiendo from './assets/pill-transcribiendo.png';
+import capturaAjustes from './assets/app-ajustes.png';
+import capturaInicio from './assets/app-inicio.png';
 
 const REPO = 'p5Patricio/WhisperKey';
 const FALLBACK_VERSION = 'v1.4.2';
 const FALLBACK_DOWNLOAD = `https://github.com/${REPO}/releases/latest/download/WhisperKey-Setup.exe`;
 
+/* Marcas de 20px, trazo de 1.5. Sin emoji: rompen el registro tipográfico. */
+const Glifo: React.FC<{ d: string }> = ({ d }) => (
+  <svg
+    className="tarjeta__marca"
+    width="20" height="20" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d={d} />
+  </svg>
+);
+
+const GLIFOS = {
+  rayo: 'M13 2 3 14h9l-1 8 10-12h-9l1-8Z',
+  candado: 'M5 11h14v10H5V11Zm3 0V7a4 4 0 0 1 8 0v4',
+  idioma: 'M3 12h18M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18ZM3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0Z',
+  cursor: 'M4 4l7 16 2-7 7-2L4 4Z',
+  capa: 'M4 8h16v9H4V8Zm4 13h8M12 17v4',
+  memoria: 'M8 4h8v16H8V4ZM4 9h4M4 15h4M16 9h4M16 15h4',
+  engranaje: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm8-3-2 .6-.5 1.3 1 1.8-1.8 1.8-1.8-1-1.3.5L13 19h-2l-.6-2-1.3-.5-1.8 1L5.5 15.7l1-1.8-.5-1.3L4 12v-2l2-.6.5-1.3-1-1.8L7.3 4.5l1.8 1 1.3-.5L11 3h2l.6 2 1.3.5 1.8-1 1.8 1.8-1 1.8.5 1.3 2 .6v2Z',
+  teclado: 'M3 7h18v10H3V7Zm3 3h.01M9 10h.01M12 10h.01M15 10h.01M18 10h.01M8 14h8',
+  cerebro: 'M9 4a3 3 0 0 0-3 3 3 3 0 0 0-1 5.8V15a3 3 0 0 0 3 3h1V4H9Zm6 0a3 3 0 0 1 3 3 3 3 0 0 1 1 5.8V15a3 3 0 0 1-3 3h-1V4h0Z',
+  arquitectura: 'M12 3 3 8l9 5 9-5-9-5ZM3 14l9 5 9-5M3 11l9 5 9-5',
+  llave: 'M15 4a5 5 0 1 0-4.6 7L4 17.4V21h3.6l1.2-1.2v-2h2v-2h2l1.2-1.2A5 5 0 0 0 15 4Z',
+  libro: 'M4 4h7a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H4V4Zm16 0h-7a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h7V4Z',
+};
+
+const CARACTERISTICAS = [
+  {
+    glifo: GLIFOS.rayo,
+    titulo: 'Motor C++ residente',
+    texto: 'El modelo queda cargado en memoria. Cada dictado paga sólo la inferencia, no la carga desde disco.',
+  },
+  {
+    glifo: GLIFOS.candado,
+    titulo: 'Privado por construcción',
+    texto: 'Tu voz no sale de tu computadora. Sin metadatos, sin llamadas a servidores remotos, sin cuentas.',
+  },
+  {
+    glifo: GLIFOS.idioma,
+    titulo: 'Spanglish técnico',
+    texto: '«Hacé un pull request», «revisá el backend», «deploy en staging». Entiende cómo hablás de verdad.',
+  },
+  {
+    glifo: GLIFOS.cursor,
+    titulo: 'Inyección transparente',
+    texto: 'El texto aparece en VS Code, Cursor, Slack u Obsidian. Tu portapapeles queda como estaba.',
+  },
+  {
+    glifo: GLIFOS.capa,
+    titulo: 'Indicador discreto',
+    texto: 'Una píldora en la esquina te dice si está escuchando o transcribiendo. Nada más ocupa la pantalla.',
+  },
+  {
+    glifo: GLIFOS.memoria,
+    titulo: 'Control de la VRAM',
+    texto: 'Liberá la memoria de la GPU desde la bandeja cuando necesites todo el equipo para otra cosa.',
+  },
+];
+
+const COMPARATIVA = [
+  ['Privacidad del audio', 'Todo en tu máquina', 'Enviado a servidores externos'],
+  ['Costo', 'Gratis y de código abierto', 'USD 10 a 20 por mes'],
+  ['Sin conexión', 'Funciona completo', 'Requiere internet siempre'],
+  ['Spanglish técnico', 'Nativo, con contexto propio', 'Rígido o un solo idioma'],
+  ['Auditoría', 'Código abierto, licencia MIT', 'Propietario y cerrado'],
+];
+
+const PASOS = [
+  {
+    numero: 'Paso 1',
+    titulo: 'Descargá el instalador',
+    texto: 'Un archivo de 28 MB. Sin cuentas, sin tarjetas, sin telemetría. Se instala sin permisos de administrador.',
+    imagen: null as string | null,
+    archivo: true,
+  },
+  {
+    numero: 'Paso 2',
+    titulo: 'El asistente hace el resto',
+    texto: 'Detecta si tenés GPU NVIDIA o sólo CPU, prueba el micrófono y te deja capturar tus propias teclas. Termina en menos de un minuto.',
+    imagen: capturaInicio,
+  },
+  {
+    numero: 'Paso 3',
+    titulo: 'Ajustá lo que quieras, cuando quieras',
+    texto: 'Modelo, micrófono, teclas, indicador e historial. Todo desde la bandeja del sistema, sin tocar un archivo de configuración.',
+    imagen: capturaAjustes,
+  },
+];
+
+const PREGUNTAS = [
+  {
+    p: '¿Necesito una placa de video potente?',
+    r: 'No. WhisperKey trae un motor optimizado para CPU con instrucciones AVX y AVX2. Si tenés una NVIDIA GTX o RTX, descarga sola el runtime CUDA y baja de 200 ms por dictado.',
+  },
+  {
+    p: '¿Qué modelos de Whisper puedo usar?',
+    r: 'Los cinco oficiales en formato GGML: tiny, base, small, medium y large-v3. Se cambian desde Configuración, sin reinstalar nada. Para Spanglish, small o superior.',
+  },
+  {
+    p: '¿Puedo cambiar las teclas?',
+    r: 'Sí. Push-to-Talk, Toggle y la de cancelar se reasignan desde Configuración, capturando en vivo la combinación que prefieras.',
+  },
+  {
+    p: '¿Cómo se actualiza?',
+    r: 'Sola. Cuando hay una versión nueva te avisa, verifica el instalador contra su hash y actualiza con un clic. Tus ajustes y modelos quedan donde están.',
+  },
+];
+
+const DOCUMENTACION = [
+  {
+    glifo: GLIFOS.engranaje,
+    titulo: 'Dónde vive tu configuración',
+    texto: 'En %APPDATA%\\WhisperKey\\config.toml. Se crea solo, comentado, la primera vez que abrís la aplicación.',
+  },
+  {
+    glifo: GLIFOS.teclado,
+    titulo: 'Cambiar las teclas',
+    texto: 'Bandeja del sistema → Configuración → Hotkeys. Capturá la combinación en vivo y guardá.',
+  },
+  {
+    glifo: GLIFOS.cerebro,
+    titulo: 'Elegir el modelo',
+    texto: 'Cinco modelos GGML según tu equipo. «Automático» elige por vos mirando la memoria disponible.',
+  },
+  {
+    glifo: GLIFOS.arquitectura,
+    titulo: 'Cómo funciona por dentro',
+    texto: 'Un whisper-server residente con un endpoint HTTP local. El audio se procesa ahí mismo y nunca sale a internet.',
+  },
+  {
+    glifo: GLIFOS.llave,
+    titulo: 'Si algo no anda',
+    texto: '¿No graba? Esperá a que el ícono esté en verde. ¿No pega el texto? Probá en el Bloc de notas: algunas apps como administrador bloquean la simulación de teclado.',
+  },
+  {
+    glifo: GLIFOS.libro,
+    titulo: '¿Más detalle?',
+    texto: 'El README en GitHub tiene la arquitectura completa, el troubleshooting extendido y cómo compilar desde el código.',
+  },
+];
+
+const EJEMPLOS = [
+  'Hacé un git push al branch de staging, deployá en Kubernetes y corré los tests de integración.',
+  'Revisá el pull request de autenticación, agregá los logs en el backend y verificá el endpoint de Whisper.',
+  'Creá una migración en PostgreSQL para los usuarios activos y optimizá las queries con un índice.',
+];
+
 export const App: React.FC = () => {
   const [version, setVersion] = useState(FALLBACK_VERSION);
-  const [downloadUrl, setDownloadUrl] = useState(FALLBACK_DOWNLOAD);
-  
-  // Interactive Demo State
-  const [isRecording, setIsRecording] = useState(false);
-  const [displayText, setDisplayText] = useState('Hacé un git push al branch de staging y deployá los cambios en Kubernetes.');
-  const [demoStatus, setDemoStatus] = useState('Listo para dictar');
-  const [sampleIdx, setSampleIdx] = useState(0);
-  
-  // FAQ state
-  const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [urlDescarga, setUrlDescarga] = useState(FALLBACK_DOWNLOAD);
 
-  const sampleTexts = [
-    'Hacé un git push al branch de staging, deployá en Kubernetes y corré los tests de integración.',
-    'Revisá el pull request de autenticación, agregá los logs en el backend y verificá el endpoint de Whisper.',
-    'Creá una nueva migración en PostgreSQL para los usuarios activos y optimizá las queries con un índice.'
-  ];
+  const [grabando, setGrabando] = useState(false);
+  const [texto, setTexto] = useState(EJEMPLOS[0]);
+  const [escribiendo, setEscribiendo] = useState(false);
+  const [indice, setIndice] = useState(1);
+  const [abierta, setAbierta] = useState<number | null>(0);
 
   useEffect(() => {
     fetch(`https://api.github.com/repos/${REPO}/releases/latest`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.tag_name) setVersion(data.tag_name);
-        const exeAsset = data.assets?.find((a: any) => a.name?.endsWith('.exe'));
-        if (exeAsset?.browser_download_url) {
-          setDownloadUrl(exeAsset.browser_download_url);
-        }
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.tag_name) setVersion(d.tag_name);
+        const exe = d.assets?.find((a: { name?: string }) => a.name?.endsWith('.exe'));
+        if (exe?.browser_download_url) setUrlDescarga(exe.browser_download_url);
       })
       .catch(() => {});
   }, []);
 
-  const handleStartRecording = () => {
-    if (isRecording) return;
-    setIsRecording(true);
-    setDemoStatus('● Grabando voz');
-  };
+  const empezar = useCallback(() => {
+    setGrabando((yaEstaba) => {
+      if (yaEstaba) return yaEstaba;
+      setTexto('');
+      return true;
+    });
+  }, []);
 
-  const handleStopRecording = () => {
-    if (!isRecording) return;
-    setIsRecording(false);
-    setDemoStatus('✓ Transcrito');
-
-    const nextText = sampleTexts[sampleIdx % sampleTexts.length];
-    setSampleIdx(prev => prev + 1);
-    
-    setDisplayText('');
-    let charIdx = 0;
-    const interval = setInterval(() => {
-      if (charIdx < nextText.length) {
-        setDisplayText(nextText.slice(0, charIdx + 1));
-        charIdx++;
-      } else {
-        clearInterval(interval);
-      }
-    }, 28);
-  };
+  const terminar = useCallback(() => {
+    setGrabando((yaEstaba) => {
+      if (!yaEstaba) return yaEstaba;
+      setEscribiendo(true);
+      const objetivo = EJEMPLOS[indice % EJEMPLOS.length];
+      setIndice((n) => n + 1);
+      let i = 0;
+      const t = setInterval(() => {
+        i += 1;
+        setTexto(objetivo.slice(0, i));
+        if (i >= objetivo.length) {
+          clearInterval(t);
+          setEscribiendo(false);
+        }
+      }, 26);
+      return false;
+    });
+  }, [indice]);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'F9' || e.code === 'F9') {
-        e.preventDefault();
-        handleStartRecording();
-      }
+    const abajo = (e: KeyboardEvent) => {
+      if (e.code === 'F9') { e.preventDefault(); empezar(); }
     };
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'F9' || e.code === 'F9') {
-        e.preventDefault();
-        handleStopRecording();
-      }
+    const arriba = (e: KeyboardEvent) => {
+      if (e.code === 'F9') { e.preventDefault(); terminar(); }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('keydown', abajo);
+    window.addEventListener('keyup', arriba);
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('keydown', abajo);
+      window.removeEventListener('keyup', arriba);
     };
-  }, [isRecording, sampleIdx]);
+  }, [empezar, terminar]);
+
+  const estado = grabando ? 'Escuchando' : escribiendo ? 'Transcribiendo' : 'Listo';
 
   return (
-    <div className="app-root">
-      {/* Fixed Fullscreen Background */}
-      <Threads
-        className="threads-fixed-bg"
-        color={[0.15, 0.55, 1.0]}
-        amplitude={1.8}
-        distance={0.15}
-        enableMouseInteraction={false}
-      />
-
-      {/* Header */}
-      <header className="site-header">
-        <div className="container nav-container">
-          <a href="#" className="brand-logo">
-            <img src="assets/logo.png" alt="WhisperKey Logo" />
+    <>
+      <header className="nav">
+        <div className="nav__interior">
+          <a href="#inicio" className="nav__marca">
+            <img src="assets/logo.png" alt="" />
             <span>WhisperKey</span>
           </a>
 
-          <nav>
-            <ul className="nav-links">
-              <li><a href="#features" className="nav-link">Características</a></li>
-              <li><a href="#demo" className="nav-link">Demo</a></li>
-              <li><a href="#comparativa" className="nav-link">Comparativa</a></li>
-              <li><a href="#como-empezar" className="nav-link">Cómo Empezar</a></li>
-              <li><a href="#documentacion" className="nav-link">Documentación</a></li>
-              <li><a href="#faq" className="nav-link">Preguntas Frecuentes</a></li>
+          <nav aria-label="Secciones">
+            <ul className="nav__enlaces">
+              <li><a href="#dictado">Dictado</a></li>
+              <li><a href="#caracteristicas">Características</a></li>
+              <li><a href="#comparativa">Comparativa</a></li>
+              <li><a href="#empezar">Empezar</a></li>
+              <li><a href="#documentacion">Documentación</a></li>
+              <li><a href="#preguntas">Preguntas</a></li>
             </ul>
           </nav>
 
-          <div className="nav-actions">
-            <a href={`https://github.com/${REPO}`} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-              GitHub
+          <div className="nav__acciones">
+            <a
+              href={`https://github.com/${REPO}`}
+              target="_blank" rel="noopener noreferrer"
+              className="nav__icono" aria-label="Repositorio en GitHub"
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
+              </svg>
             </a>
-            <a href={downloadUrl} className="btn btn-primary btn-sm">
-              Descargar .exe
-            </a>
+            <a href={urlDescarga} className="btn btn--pill">Descargar</a>
           </div>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="hero-section">
-        <div className="container hero-content">
-          <div className="badge">
-            <span className="badge-dot"></span>
-            <span>Versión <strong>{version}</strong> • 100% Offline • Sin API Keys</span>
-          </div>
-
-
-          <h1 className="hero-title">
-            Dictado por voz local.<br />
-            <span className="gradient-text">Cero nube, cero latencia.</span>
-          </h1>
-
-          <p className="hero-subtitle">
-            Convierte tu voz en texto en tiempo real con <strong>OpenAI Whisper</strong> corriendo directamente en tu GPU o CPU. Soporte nativo para <em>Spanglish técnico</em> e inyección instantánea en cualquier editor o aplicación.
-          </p>
-
-          <div className="hero-cta">
-            <a href={downloadUrl} className="btn btn-primary btn-lg">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Descargar para Windows (.exe)
-            </a>
-            <a href={`https://github.com/${REPO}`} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-lg">
-              Ver Código Abierto
-            </a>
-          </div>
-
-          <div className="hero-meta">
-            <span>✓ Instalador portable (~28 MB)</span>
-            <span>✓ Windows 10/11 x64</span>
-            <span>✓ Licencia MIT</span>
-          </div>
-        </div>
-      </section>
-
-      {/* Interactive Demo */}
-      <section id="demo" className="section" style={{ paddingTop: 0 }}>
-        <div className="container">
-          <div className="showcase-container">
-            <div className="window-header">
-              <div className="window-dots">
-                <span className="dot dot-red"></span>
-                <span className="dot dot-yellow"></span>
-                <span className="dot dot-green"></span>
-              </div>
-              <div className="window-title">WhisperKey Interactive Simulator — main.py</div>
-              <div className="window-status">
-                {isRecording && (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                    <span style={{ width: '3px', height: '12px', background: '#38bdf8', borderRadius: '2px', animation: 'pulse 0.6s infinite alternate' }}></span>
-                    <span style={{ width: '3px', height: '18px', background: '#38bdf8', borderRadius: '2px', animation: 'pulse 0.4s infinite alternate 0.2s' }}></span>
-                    <span style={{ width: '3px', height: '10px', background: '#38bdf8', borderRadius: '2px', animation: 'pulse 0.8s infinite alternate 0.4s' }}></span>
-                  </span>
-                )}
-                <span>{demoStatus}</span>
-              </div>
+      <main id="inicio">
+        {/* Héroe — lienzo blanco, el producto descansa al final de la teja */}
+        <section className="teja teja--claro hero">
+          <div className="contenido">
+            <p className="eyebrow">{version} · Sin nube · Sin claves de API</p>
+            <h1 className="display">
+              <span>Dictado por voz local.</span>
+              <span className="apagado">Cero nube, cero latencia.</span>
+            </h1>
+            <p className="lead">
+              Convierte tu voz en texto donde ya estás escribiendo. Whisper corre en tu
+              propia GPU o CPU, entiende el Spanglish técnico y pega el resultado en
+              cualquier aplicación.
+            </p>
+            <div className="acciones">
+              <a href={urlDescarga} className="btn btn--pill">Descargar para Windows</a>
+              <a href={`https://github.com/${REPO}`} className="btn btn--texto"
+                 target="_blank" rel="noopener noreferrer">Ver el código &rsaquo;</a>
             </div>
-
-            <div className="interactive-demo-body">
-              <div className="demo-controls">
-                <h3 className="demo-title">Probá el dictado en vivo</h3>
-                <p className="demo-desc">
-                  Hacé clic y mantené presionado el botón (o presioná <span className="key-badge">F9</span> en tu teclado) para simular una grabación por Push-to-Talk.
-                </p>
-
-                <button
-                  className={`hotkey-trigger-btn ${isRecording ? 'active' : ''}`}
-                  onMouseDown={handleStartRecording}
-                  onMouseUp={handleStopRecording}
-                  onTouchStart={(e) => { e.preventDefault(); handleStartRecording(); }}
-                  onTouchEnd={(e) => { e.preventDefault(); handleStopRecording(); }}
-                  type="button"
-                >
-                  <span className="btn-label">{isRecording ? 'Escuchando...' : 'Presionar F9 para dictar'}</span>
-                  <span className="key-badge">F9 / PTT</span>
-                </button>
-              </div>
-
-              <div className="demo-editor">
-                <div className="editor-header">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
-                  <span>Terminal / Editor de código</span>
-                </div>
-                <div className="editor-output">
-                  <span style={{ color: '#64748b' }}>// El texto dictado se inyecta automáticamente aquí...</span><br /><br />
-                  <span style={{ color: '#38bdf8' }}>$ </span><span>{displayText}</span><span className="cursor-blink"></span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Metrics */}
-      <section className="metrics-section">
-        <div className="container">
-          <div className="metrics-grid">
-            <div className="metric-card">
-              <div className="metric-value">0 ms</div>
-              <div className="metric-label">Datos enviados a servidores (100% en tu máquina)</div>
-            </div>
-            <div className="metric-card">
-              <div className="metric-value">&lt;300ms</div>
-              <div className="metric-label">Latencia con motor residente C++ (whisper.cpp)</div>
-            </div>
-            <div className="metric-card">
-              <div className="metric-value">$0.00</div>
-              <div className="metric-label">Sin suscripciones, sin límites de palabras</div>
-            </div>
-            <div className="metric-card">
-              <div className="metric-value">100%</div>
-              <div className="metric-label">Código abierto bajo licencia libre MIT</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features */}
-      <section id="features" className="section">
-        <div className="container">
-          <div className="section-header">
-            <div className="section-tag">Diseñado para Máximo Rendimiento</div>
-            <h2 className="section-title">El dictado profesional que respeta tu privacidad</h2>
-            <p className="section-subtitle">
-              Construido desde cero con un motor en C++ de ultra baja latencia y optimizaciones de hardware de última generación.
+            <p className="hero__fino fino">
+              <span>Instalador de 28 MB</span>
+              <span>Windows 10 y 11 · 64 bits</span>
+              <span>Licencia MIT</span>
             </p>
           </div>
 
-          <div className="features-grid">
-            <div className="feature-card">
-              <div className="feature-icon">⚡</div>
-              <h3 className="feature-title">Motor C++ Residente</h3>
-              <p className="feature-desc">
-                Mantiene el modelo cargado en memoria local sin recargar desde disco en cada dictado. Solo pagás el costo de inferencia.
+          <div className="hero__producto">
+            <img className="hero__pildora" src={pildoraEscuchando}
+                 alt="Indicador de WhisperKey mostrando «Escuchando»" />
+            <p className="fino hero__pie-producto">
+              Esto es todo lo que aparece en pantalla mientras dictás.
+            </p>
+          </div>
+        </section>
+
+        {/* Teja oscura — la demo */}
+        <section id="dictado" className="teja teja--oscuro">
+          <div className="contenido">
+            <div className="cabecera-seccion">
+              <p className="eyebrow">Probalo acá mismo</p>
+              <h2 className="display-lg">Mantené la tecla. Hablá. Soltá.</h2>
+              <p className="lead">
+                Así se siente dictar con WhisperKey. Mantené presionado el botón —
+                o la tecla F9 de tu teclado— y soltá cuando termines.
               </p>
             </div>
 
-            <div className="feature-card">
-              <div className="feature-icon">🔒</div>
-              <h3 className="feature-title">100% Privado y Offline</h3>
-              <p className="feature-desc">
-                Tu voz nunca sale de tu computadora. Cero metadatos, cero conexiones a servidores remotos, ideal para código y datos confidenciales.
-              </p>
-            </div>
+            <div className="demo">
+              <div className="demo__panel">
+                <div className="demo__barra">
+                  {grabando || escribiendo ? (
+                    <img
+                      className="demo__pildora"
+                      src={grabando ? pildoraEscuchando : pildoraTranscribiendo}
+                      alt={`Indicador de WhisperKey: ${estado}`}
+                    />
+                  ) : (
+                    <>
+                      <span className="demo__punto" />
+                      <span>{estado} para dictar</span>
+                    </>
+                  )}
+                </div>
+                <div className="demo__salida" aria-live="polite">
+                  {texto}
+                  {(grabando || escribiendo) && <span className="demo__cursor" />}
+                </div>
+              </div>
 
-            <div className="feature-card">
-              <div className="feature-icon">🌐</div>
-              <h3 className="feature-title">Spanglish Técnico Nativo</h3>
-              <p className="feature-desc">
-                Entiende perfectamente mezclas bilingües de programadores: <em>"hacé un pull request"</em>, <em>"revisá el backend"</em> o <em>"deploy en staging"</em> sin errores.
-              </p>
-            </div>
-
-            <div className="feature-card">
-              <div className="feature-icon">🎯</div>
-              <h3 className="feature-title">Inyección Transparente</h3>
-              <p className="feature-desc">
-                Pega el texto directamente en VS Code, Cursor, Discord, Slack, Obsidian o cualquier ventana activa preservando tu portapapeles.
-              </p>
-            </div>
-
-            <div className="feature-card">
-              <div className="feature-icon">🎮</div>
-              <h3 className="feature-title">Overlay Visual HUD</h3>
-              <p className="feature-desc">
-                Indicador discreto en pantalla que te avisa cuándo está escuchando o procesando sin quitar el foco de tus juegos o herramientas.
-              </p>
-            </div>
-
-            <div className="feature-card">
-              <div className="feature-icon">🚀</div>
-              <h3 className="feature-title">Control de VRAM Inteligente</h3>
-              <p className="feature-desc">
-                Descargá el modelo de la memoria GPU con un solo clic desde la bandeja del sistema cuando necesites todo el rendimiento para renderizar o jugar.
-              </p>
+              <div className="demo__control">
+                <button
+                  type="button"
+                  className="btn btn--pill btn--pill-oscuro"
+                  onMouseDown={empezar} onMouseUp={terminar} onMouseLeave={terminar}
+                  onTouchStart={(e) => { e.preventDefault(); empezar(); }}
+                  onTouchEnd={(e) => { e.preventDefault(); terminar(); }}
+                >
+                  {grabando ? 'Soltá para transcribir' : 'Mantené para dictar'}
+                </button>
+                <span className="tecla">F9</span>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Comparison */}
-      <section id="comparativa" className="section" style={{ background: 'rgba(10, 14, 22, 0.4)' }}>
-        <div className="container">
-          <div className="section-header">
-            <div className="section-tag">Transparencia Total</div>
-            <h2 className="section-title">WhisperKey vs Servicios en la Nube</h2>
-            <p className="section-subtitle">Por qué ejecutar IA localmente supera a cualquier solución SaaS tradicional.</p>
+        {/* Pergamino — las cifras, sin tarjetas */}
+        <section className="teja teja--pergamino">
+          <div className="contenido cifras">
+            <div>
+              <p className="cifra__valor">0</p>
+              <p className="cifra__nota">bytes enviados a un servidor</p>
+            </div>
+            <div>
+              <p className="cifra__valor">260 ms</p>
+              <p className="cifra__nota">de latencia percibida por dictado</p>
+            </div>
+            <div>
+              <p className="cifra__valor">$0</p>
+              <p className="cifra__nota">sin suscripción ni límite de palabras</p>
+            </div>
+            <div>
+              <p className="cifra__valor">MIT</p>
+              <p className="cifra__nota">código abierto y auditable</p>
+            </div>
           </div>
+        </section>
 
-          <div className="comparison-container">
-            <table className="comparison-table">
+        {/* Blanco — características */}
+        <section id="caracteristicas" className="teja teja--claro">
+          <div className="contenido--ancho">
+            <div className="cabecera-seccion">
+              <p className="eyebrow">Cómo está hecho</p>
+              <h2 className="display-lg">Rápido porque no sale de tu máquina.</h2>
+              <p className="lead">
+                Un motor en C++ que se queda cargado, y un pipeline de audio que no
+                pierde una sílaba.
+              </p>
+            </div>
+            <div className="rejilla">
+              {CARACTERISTICAS.map((c) => (
+                <article className="tarjeta" key={c.titulo}>
+                  <Glifo d={c.glifo} />
+                  <h3>{c.titulo}</h3>
+                  <p>{c.texto}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Teja oscura — comparativa */}
+        <section id="comparativa" className="teja teja--oscuro">
+          <div className="contenido">
+            <div className="cabecera-seccion">
+              <p className="eyebrow">Sin letra chica</p>
+              <h2 className="display-lg">Local contra la nube.</h2>
+            </div>
+            <table className="tabla">
               <thead>
                 <tr>
-                  <th>Característica</th>
-                  <th style={{ color: 'var(--accent-primary-hover)' }}>WhisperKey</th>
-                  <th style={{ color: 'var(--text-muted)' }}>Servicios SaaS / Cloud</th>
+                  <th scope="col">Característica</th>
+                  <th scope="col">WhisperKey</th>
+                  <th scope="col">Servicios en la nube</th>
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td><strong>Privacidad de Audio</strong></td>
-                  <td><span className="check-mark">✓ 100% Local (Tu máquina)</span></td>
-                  <td><span className="cross-mark">✗ Enviado a servidores externos</span></td>
-                </tr>
-                <tr>
-                  <td><strong>Costo / Suscripción</strong></td>
-                  <td><span className="check-mark">✓ Gratis y Open Source</span></td>
-                  <td><span className="cross-mark">✗ $10 - $20 USD / mes</span></td>
-                </tr>
-                <tr>
-                  <td><strong>Funciona sin Internet</strong></td>
-                  <td><span className="check-mark">✓ Sí, totalmente offline</span></td>
-                  <td><span className="cross-mark">✗ Requiere conexión constante</span></td>
-                </tr>
-                <tr>
-                  <td><strong>Spanglish para Desarrolladores</strong></td>
-                  <td><span className="check-mark">✓ Optimizado con Whisper</span></td>
-                  <td><span className="cross-mark">✗ Rígido / Solo un idioma</span></td>
-                </tr>
-                <tr>
-                  <td><strong>Auditoría del Código</strong></td>
-                  <td><span className="check-mark">✓ Código abierto (MIT)</span></td>
-                  <td><span className="cross-mark">✗ Propietario / Código cerrado</span></td>
-                </tr>
+                {COMPARATIVA.map(([que, nuestro, otros]) => (
+                  <tr key={que}>
+                    <td>{que}</td>
+                    <td className="tabla__si"><span className="tabla__marca">✓</span>{nuestro}</td>
+                    <td className="tabla__no">{otros}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Steps */}
-      <section id="como-empezar" className="section">
-        <div className="container">
-          <div className="section-header">
-            <div className="section-tag">Listo en 60 Segundos</div>
-            <h2 className="section-title">¿Cómo empezar a usarlo?</h2>
-            <p className="section-subtitle">Sin configuraciones complejas ni terminales.</p>
-          </div>
-
-          <div className="steps-grid">
-            <div className="step-card">
-              <div className="step-number">1</div>
-              <h3 className="step-title">Descargá el instalador</h3>
-              <p className="step-desc">Hacé clic en "Descargar .exe" arriba o buscá el último release en GitHub. Bajás <code style={{ color: 'var(--accent-cyan)' }}>WhisperKey-Setup.exe</code> (~28 MB) — sin cuentas, sin tarjetas.</p>
+        {/* Blanco — pasos con imagen de producto */}
+        <section id="empezar" className="teja teja--claro">
+          <div className="contenido">
+            <div className="cabecera-seccion">
+              <p className="eyebrow">Listo en un minuto</p>
+              <h2 className="display-lg">Instalar y hablar.</h2>
             </div>
 
-            <div className="step-card">
-              <div className="step-number">2</div>
-              <h3 className="step-title">Seguí el Onboarding</h3>
-              <p className="step-desc">Al abrir WhisperKey por primera vez, un asistente detecta tu hardware (GPU NVIDIA o CPU), prueba tu micrófono en segundos y te deja capturar tus propios hotkeys.</p>
-            </div>
-
-            <div className="step-card">
-              <div className="step-number">3</div>
-              <h3 className="step-title">Elegí tu modo: F9 o F10</h3>
-              <p className="step-desc">Mantené presionado <code style={{ color: 'var(--accent-cyan)' }}>F9</code> para dictar mientras hablás (Push-to-Talk), o presioná <code style={{ color: 'var(--accent-cyan)' }}>F10</code> una vez para activar el modo Toggle y volvé a presionarlo para terminar.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section id="faq" className="section" style={{ background: 'rgba(10, 14, 22, 0.4)' }}>
-        <div className="container">
-          <div className="section-header">
-            <div className="section-tag">Resolvé tus Dudas</div>
-            <h2 className="section-title">Preguntas Frecuentes</h2>
-          </div>
-
-          <div className="faq-container">
-            {[
-              {
-                q: "¿Necesito una tarjeta gráfica potente para usarlo?",
-                a: "No es obligatorio. WhisperKey incluye un motor de inferencia optimizado para CPU con instrucciones SIMD (AVX/AVX2). Si tenés una GPU NVIDIA (GTX/RTX), la app descargará automáticamente el runtime CUDA para lograr latencias inferiores a 200 ms."
-              },
-              {
-                q: "¿Qué modelos de Whisper están soportados?",
-                a: "Soporta todos los modelos GGML oficiales: tiny, base, small, medium y large-v3. Podés cambiar el modelo en cualquier momento desde la ventana de Configuración."
-              },
-              {
-                q: "¿Puedo cambiar las teclas de acceso rápido (hotkeys)?",
-                a: "Sí. Desde el menú de Configuración podés reasignar tanto la tecla de Push-to-Talk (por defecto F9 o Caps Lock) como la de modo Toggle (por defecto F10)."
-              },
-              {
-                q: "¿Cómo se actualiza la aplicación?",
-                a: "WhisperKey incluye un actualizador automático integrado. Cuando haya una nueva versión disponible en GitHub, te mostrará un aviso y podrás actualizar con un solo clic sin perder tus configuraciones ni modelos."
-              }
-            ].map((item, idx) => (
-              <div key={idx} className={`faq-item ${openFaq === idx ? 'open' : ''}`}>
-                <button className="faq-question" onClick={() => setOpenFaq(openFaq === idx ? null : idx)}>
-                  <span>{item.q}</span>
-                  <span className="faq-icon">+</span>
-                </button>
-                <div className="faq-answer">
-                  <p>{item.a}</p>
+            {PASOS.map((p, i) => (
+              <div className={`paso${i % 2 === 1 ? ' paso--invertido' : ''}`} key={p.titulo}>
+                <div className="paso__texto">
+                  <p className="paso__numero">{p.numero}</p>
+                  <h3>{p.titulo}</h3>
+                  <p>{p.texto}</p>
+                  {i === 0 && (
+                    <p style={{ marginTop: 'var(--e-md)' }}>
+                      <a href={urlDescarga} className="btn btn--pill">Descargar ahora</a>
+                    </p>
+                  )}
                 </div>
+                {p.imagen ? (
+                  <div className="paso__imagen">
+                    <img src={p.imagen} alt={`WhisperKey — ${p.titulo}`} loading="lazy" />
+                  </div>
+                ) : (
+                  <div className="paso__archivo">
+                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" strokeWidth="1.25" strokeLinecap="round"
+                         strokeLinejoin="round" aria-hidden="true">
+                      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z" />
+                      <path d="M14 3v5h5M12 12v5m0 0-2-2m2 2 2-2" />
+                    </svg>
+                    <div>
+                      <strong>WhisperKey-Setup.exe</strong>
+                      <span>28 MB · {version} · Windows 10 y 11</span>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Documentation */}
-      <section id="documentacion" className="section">
-        <div className="container">
-          <div className="section-header">
-            <div className="section-tag">Soporte y Configuración</div>
-            <h2 className="section-title">Documentación</h2>
-            <p className="section-subtitle">
-              Todo lo que necesitás para configurar, personalizar y resolver problemas — sin salir de la página.
+        {/* Pergamino — documentación */}
+        <section id="documentacion" className="teja teja--pergamino">
+          <div className="contenido--ancho">
+            <div className="cabecera-seccion">
+              <p className="eyebrow">Documentación</p>
+              <h2 className="display-lg">Todo lo que hace falta saber.</h2>
+            </div>
+            <div className="rejilla">
+              {DOCUMENTACION.map((d) => (
+                <article className="tarjeta" key={d.titulo}>
+                  <Glifo d={d.glifo} />
+                  <h3>{d.titulo}</h3>
+                  <p>{d.texto}</p>
+                </article>
+              ))}
+            </div>
+            <p className="centrado" style={{ marginTop: 'var(--e-xl)' }}>
+              <a href={`https://github.com/${REPO}#readme`} target="_blank" rel="noopener noreferrer">
+                Leer el README completo &rsaquo;
+              </a>
             </p>
           </div>
+        </section>
 
-          <div className="features-grid">
-            <div className="feature-card">
-              <div className="feature-icon">⚙️</div>
-              <h3 className="feature-title">Dónde vive tu configuración</h3>
-              <p className="feature-desc">
-                Todos tus ajustes se guardan en <code style={{ color: 'var(--accent-cyan)' }}>%APPDATA%\WhisperKey\config.toml</code>. Se crea solo, con valores por defecto, la primera vez que abrís la app.
-              </p>
+        {/* Blanco — preguntas */}
+        <section id="preguntas" className="teja teja--claro">
+          <div className="contenido">
+            <div className="cabecera-seccion">
+              <p className="eyebrow">Preguntas</p>
+              <h2 className="display-lg">Antes de descargar.</h2>
             </div>
-
-            <div className="feature-card">
-              <div className="feature-icon">⌨️</div>
-              <h3 className="feature-title">Cambiar tus hotkeys</h3>
-              <p className="feature-desc">
-                Clic derecho en el ícono de la bandeja → Configuración → pestaña Hotkeys. Capturá en vivo la combinación que quieras para Push-to-Talk, Toggle o Cargar modelo.
-              </p>
-            </div>
-
-            <div className="feature-card">
-              <div className="feature-icon">🧠</div>
-              <h3 className="feature-title">Elegí tu modelo Whisper</h3>
-              <p className="feature-desc">
-                Desde <em>tiny</em> hasta <em>large-v3</em>, cinco modelos GGML para elegir según tu hardware. Cambialo cuando quieras desde Configuración → Modelo, sin reinstalar nada.
-              </p>
-            </div>
-
-            <div className="feature-card">
-              <div className="feature-icon">🏗️</div>
-              <h3 className="feature-title">Cómo funciona por dentro</h3>
-              <p className="feature-desc">
-                WhisperKey mantiene un servidor <code style={{ color: 'var(--accent-cyan)' }}>whisper-server.exe</code> residente en tu máquina, con un endpoint HTTP local para transcribir sin recargar el modelo en cada dictado. Tu audio se procesa ahí mismo — nunca sale a internet.
-              </p>
-            </div>
-
-            <div className="feature-card">
-              <div className="feature-icon">🛠️</div>
-              <h3 className="feature-title">Troubleshooting rápido</h3>
-              <p className="feature-desc">
-                ¿No graba? Esperá a que el ícono de bandeja esté verde. ¿No inyecta texto? Probá primero en el Bloc de notas — algunas apps con permisos de administrador bloquean la simulación de teclado.
-              </p>
-            </div>
-
-            <div className="feature-card">
-              <div className="feature-icon">📖</div>
-              <h3 className="feature-title">¿Necesitás más detalle?</h3>
-              <p className="feature-desc">
-                Esta página cubre lo esencial. El README en GitHub tiene la arquitectura completa, troubleshooting extendido y la guía para compilar desde código fuente.{' '}
-                <a href={`https://github.com/${REPO}#readme`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-cyan)' }}>
-                  Ver README completo →
-                </a>
-              </p>
+            <div className="faq">
+              {PREGUNTAS.map((q, i) => (
+                <div className={`faq__item${abierta === i ? ' faq__item--abierto' : ''}`} key={q.p}>
+                  <button
+                    type="button"
+                    className="faq__boton"
+                    aria-expanded={abierta === i}
+                    onClick={() => setAbierta(abierta === i ? null : i)}
+                  >
+                    {q.p}
+                    <span className="faq__signo" aria-hidden="true">+</span>
+                  </button>
+                  <div className="faq__cuerpo">
+                    <p>{q.r}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* CTA Final */}
-      <section id="descargar" className="section">
-        <div className="container">
-          <div className="cta-box">
-            <h2 className="cta-title">Empezá a escribir a la velocidad de tu voz</h2>
-            <p className="cta-desc">
-              Descargá WhisperKey gratis, sin registros y con total control de tu privacidad.
+        {/* Teja oscura — cierre */}
+        <section className="teja teja--oscuro cierre">
+          <div className="contenido">
+            <h2 className="display-lg">Escribí a la velocidad a la que hablás.</h2>
+            <p className="lead">Gratis, sin registro, y tu voz no se va a ningún lado.</p>
+            <div className="acciones" style={{ marginTop: 'var(--e-lg)' }}>
+              <a href={urlDescarga} className="btn btn--pill btn--pill-oscuro">
+                Descargar WhisperKey
+              </a>
+            </div>
+            <p className="fino" style={{ marginTop: 'var(--e-md)', color: 'var(--sobre-oscuro-suave)' }}>
+              {version} · Windows 10 y 11 · 28 MB
             </p>
-            <a href={downloadUrl} className="btn btn-primary btn-lg">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Descargar WhisperKey para Windows
-            </a>
           </div>
-        </div>
-      </section>
+        </section>
+      </main>
 
-      {/* Footer */}
-      <footer className="site-footer">
-        <div className="container footer-container">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <img src="assets/logo.png" alt="Logo" style={{ width: '22px', height: '22px', borderRadius: '4px' }} />
-            <span>WhisperKey © 2026 • Creado por <strong>p5Patricio</strong></span>
-          </div>
-
-          <div className="footer-links">
-            <a href={`https://github.com/${REPO}`} target="_blank" rel="noopener noreferrer">Repositorio en GitHub</a>
-            <a href={`https://github.com/${REPO}/releases`} target="_blank" rel="noopener noreferrer">Releases</a>
-            <a href={`https://github.com/${REPO}/blob/main/LICENSE`} target="_blank" rel="noopener noreferrer">Licencia MIT</a>
-          </div>
+      <footer className="pie">
+        <div className="pie__interior">
+          <ul className="pie__enlaces">
+            <li><a href={`https://github.com/${REPO}`} target="_blank" rel="noopener noreferrer">Repositorio</a></li>
+            <li><a href={`https://github.com/${REPO}/releases`} target="_blank" rel="noopener noreferrer">Versiones</a></li>
+            <li><a href={`https://github.com/${REPO}/blob/main/CHANGELOG.md`} target="_blank" rel="noopener noreferrer">Novedades</a></li>
+            <li><a href={`https://github.com/${REPO}#readme`} target="_blank" rel="noopener noreferrer">Documentación</a></li>
+            <li><a href={`https://github.com/${REPO}/issues`} target="_blank" rel="noopener noreferrer">Reportar un problema</a></li>
+            <li><a href={`https://github.com/${REPO}/blob/main/LICENSE`} target="_blank" rel="noopener noreferrer">Licencia MIT</a></li>
+          </ul>
+          <p style={{ margin: 0 }}>
+            WhisperKey © 2026 · Creado por p5Patricio · El audio nunca sale de tu equipo.
+          </p>
         </div>
       </footer>
-    </div>
+    </>
   );
 };
 

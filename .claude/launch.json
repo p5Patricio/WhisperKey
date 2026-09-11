@@ -2,10 +2,10 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "whisperkey-web-preview",
+      "name": "whisperkey-web",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--dir", "web", "preview"],
-      "port": 4173
+      "runtimeArgs": ["--dir", "web", "dev", "--port", "5173"],
+      "port": 5173
     }
   ]
 }
