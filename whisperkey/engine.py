@@ -22,6 +22,8 @@ from pathlib import Path
 
 import requests
 
+from whisperkey import proc
+
 log = logging.getLogger(__name__)
 
 # In whisper.cpp >= 1.7 the server binary is named whisper-server(.exe);
@@ -32,8 +34,6 @@ LEGACY_SERVER_EXE_NAME = "server.exe" if sys.platform == "win32" else "server"
 # Release zips are not laid out consistently: the CUDA build extracts into a
 # Release/ subdirectory while the CPU build is flat. Search both, plus bin/.
 _NESTED_BIN_SUBDIRS = ("", "Release", "bin", "build/bin")
-
-_CREATE_NO_WINDOW = 0x08000000 if sys.platform == "win32" else 0
 
 # Presence of this string in the binary means the server has a request-parameter
 # table (whisper.cpp >= ~1.6). Builds without it silently discard every form
@@ -136,19 +136,18 @@ class EngineCapabilities:
 def _probe_flags(exe_path: Path) -> set[str]:
     """Return the long CLI flags advertised by ``<exe> --help``."""
     try:
-        proc = subprocess.run(
+        salida = proc.run(
             [str(exe_path), "--help"],
             capture_output=True,
             text=True,
             timeout=30,
             cwd=str(exe_path.parent),
-            creationflags=_CREATE_NO_WINDOW,
         )
     except Exception as exc:
         log.warning("No se pudo consultar --help de %s: %s", exe_path.name, exc)
         return set()
 
-    output = (proc.stdout or "") + (proc.stderr or "")
+    output = (salida.stdout or "") + (salida.stderr or "")
     return set(re.findall(r"--([a-z0-9][a-z0-9-]*)", output))
 
 
@@ -174,7 +173,7 @@ def _probe_request_fields(exe_path: Path) -> set[str]:
     }
 
 
-def _assign_to_job_object(proc: subprocess.Popen) -> object | None:
+def _assign_to_job_object(proceso: subprocess.Popen) -> object | None:
     """Assigns *proc* to a Win32 Job Object configured with KILL_ON_JOB_CLOSE."""
     if sys.platform != "win32":
         return None
@@ -236,7 +235,7 @@ def _assign_to_job_object(proc: subprocess.Popen) -> object | None:
             kernel32.CloseHandle(job)
             return None
 
-        proc_handle = getattr(proc, "_handle", None)
+        proc_handle = getattr(proceso, "_handle", None)
         if proc_handle is not None:
             kernel32.AssignProcessToJobObject(job, wintypes.HANDLE(int(proc_handle)))
         return job
@@ -324,12 +323,11 @@ class WhisperServer:
         self._log_fh = open(log_path, "wb")
 
         log.info("Iniciando whisper-server residente: %s", " ".join(cmd))
-        self._proc = subprocess.Popen(
+        self._proc = proc.popen(
             cmd,
             cwd=str(exe_dir),
             stdout=self._log_fh,
             stderr=subprocess.STDOUT,
-            creationflags=_CREATE_NO_WINDOW,
         )
         self._job = _assign_to_job_object(self._proc)
 

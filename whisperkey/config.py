@@ -260,7 +260,9 @@ def detect_optimal_model(config: dict) -> str:
             nvidia_smi = shutil.which("nvidia-smi")
             if nvidia_smi is not None:
                 try:
-                    res = subprocess.run(
+                    from whisperkey import proc
+
+                    res = proc.run(
                         [nvidia_smi, "--query-gpu=memory.total", "--format=csv,noheader,nounits"],
                         capture_output=True,
                         text=True,

@@ -17,6 +17,7 @@ try:
 except ImportError:  # pragma: no cover
     ctk = None  # type: ignore[assignment]
 
+from whisperkey import proc
 from whisperkey import theme
 from whisperkey.version import __version__ as VERSION
 
@@ -170,7 +171,7 @@ def launch_silent_install(installer_path: pathlib.Path) -> bool:
         ]
 
         log.info("Launching silent install: %s", " ".join(cmd))
-        subprocess.Popen(cmd, creationflags=subprocess.CREATE_NO_WINDOW)
+        proc.popen(cmd)
 
         log.info("Exiting app for update...")
         sys.exit(0)
