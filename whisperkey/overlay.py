@@ -45,9 +45,11 @@ STATES: dict[str, dict | None] = {
     "hidden":     None,
 }
 
-# Fotogramas del punto pulsante: del color pleno a una versión apagada.
-_PULSE_INTERVAL_MS = 90
-_PULSE_STEPS = 14
+# Respiración del punto de estado: del color pleno a una versión apagada. Más
+# rápido o más profundo deja de leerse como respiración y pasa a parpadeo.
+_PULSE_INTERVAL_MS = 140
+_PULSE_STEPS = 12
+_PULSE_DEPTH = 0.55
 
 # Animación del estado "processing": sin ella una transcripción larga parece una
 # app colgada, porque el usuario suelta la tecla y no ve nada hasta que llega el
@@ -62,9 +64,11 @@ _CANCELLED_AUTO_HIDE_MS = 1200
 # Margen para que arranque el thread de tkinter.
 _STARTUP_TIMEOUT_S = 3.0
 
-# Geometría de la píldora
-_PAD_X = 15
-_PAD_Y = 9
+# Geometría de la píldora. El alto sale del alto de línea de la fuente más el
+# relleno; el de Pillow es más generoso que el de tkinter, así que el relleno se
+# ajustó para que la píldora conserve el tamaño que tenía con el Canvas.
+_PAD_X = 13
+_PAD_Y = 5
 _DOT_RADIUS = 4
 _DOT_GAP = 10
 
@@ -123,6 +127,9 @@ class RecordingOverlay:
         # camino suavizado, así que necesita saber qué texto y estado repintar.
         self._pulse_state = "hidden"
         self._pulse_text = ""
+        # Tamaño con el que la ventana está mostrada. Redimensionar y volver a
+        # mapear en cada fotograma del pulso es lo que se veía como parpadeo.
+        self._shown_size: tuple[int, int] | None = None
 
         if self._enabled:
             t = threading.Thread(target=self._run, daemon=True, name="overlay")
@@ -152,7 +159,11 @@ class RecordingOverlay:
             self.root.wm_attributes("-alpha", self._opacity)
 
         try:
-            self._scale = pill.device_scale(self.root.winfo_screenwidth())
+            # Píxeles por punto, igual que usa tkinter para medir sus fuentes.
+            # Es lo que hace que la píldora conserve su tamaño de siempre.
+            self._scale = float(self.root.tk.call("tk", "scaling"))
+            if not (0.5 <= self._scale <= 4.0):
+                self._scale = pill.device_scale(self.root.winfo_screenwidth())
         except Exception:  # pragma: no cover - depende del sistema
             self._scale = 1.0
 
@@ -263,11 +274,17 @@ class RecordingOverlay:
             # UpdateLayeredWindow trabaja en píxeles físicos y fija tamaño y
             # posición por su cuenta; tkinter razona en lógicos.
             x, y = self._physical_position(imagen.width, imagen.height)
-            logico_w = max(1, int(imagen.width / self._scale))
-            logico_h = max(1, int(imagen.height / self._scale))
-            self.root.geometry(f"{logico_w}x{logico_h}")
-            self.root.deiconify()
-            self.root.update_idletasks()
+            tamano = (
+                max(1, int(imagen.width / self._scale)),
+                max(1, int(imagen.height / self._scale)),
+            )
+            # Sólo cuando cambia de verdad: UpdateLayeredWindow ya fija tamaño y
+            # posición, así que remapear en cada fotograma sólo produce parpadeo.
+            if tamano != self._shown_size:
+                self.root.geometry(f"{tamano[0]}x{tamano[1]}")
+                self.root.deiconify()
+                self.root.update_idletasks()
+                self._shown_size = tamano
 
             hwnd = pill.top_level_hwnd(self.root.winfo_id())
             if not pill.push_layered(hwnd, imagen, x, y):
@@ -315,6 +332,7 @@ class RecordingOverlay:
         state = STATES.get(state_key)
         if state is None:
             self.root.withdraw()
+            self._shown_size = None
             return
         self._dot_color = state["dot"]
         self._pulse_state = state_key
@@ -353,7 +371,7 @@ class RecordingOverlay:
             return
         phase = self._pulse_tick % (_PULSE_STEPS * 2)
         step = phase if phase < _PULSE_STEPS else (_PULSE_STEPS * 2 - phase)
-        shade = _blend(self._dot_color, SURFACE, (step / _PULSE_STEPS) * 0.75)
+        shade = _blend(self._dot_color, SURFACE, (step / _PULSE_STEPS) * _PULSE_DEPTH)
 
         if self._layered:
             estado = STATES.get(self._pulse_state) or {}
