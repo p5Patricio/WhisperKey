@@ -6,6 +6,8 @@ import logging
 import os
 import shutil
 import subprocess
+
+from whisperkey import proc
 import sys
 from pathlib import Path
 
@@ -30,7 +32,7 @@ class WindowsPlatform(BasePlatform):
         if nvidia_smi is None:
             return ("cpu", "int8")
         try:
-            result = subprocess.run(
+            result = proc.run(
                 [nvidia_smi, "--query-gpu=name", "--format=csv,noheader"],
                 capture_output=True,
                 text=True,

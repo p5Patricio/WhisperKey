@@ -1,5 +1,37 @@
 # Changelog
 
+## v1.4.2 — Silent startup, and the indicator back to its usual size
+
+### Fixed — no console window at startup
+
+- **Starting with Windows no longer flashes a terminal.** The application lives
+  in the tray and has no console of its own, and on Windows launching a console
+  program from such a process *creates a window* even when its output is
+  redirected — it needs `CREATE_NO_WINDOW`. Two `nvidia-smi` lookups run at
+  startup (GPU detection and model selection) and neither passed it, so the
+  flash happened on every boot.
+- Every child process in the package now goes through one helper that sets the
+  flag, and a test fails the build if any module calls `subprocess` directly.
+
+### Fixed — the indicator was too small and flickered
+
+- **Back to its previous size.** The pill is drawn with Pillow, which measures
+  fonts in pixels, while tkinter measures them in points. Passing the configured
+  size straight through made it about 30% smaller than before. It is now
+  converted using the same scaling factor tkinter applies, and the pill height
+  comes from the font's line height rather than the ink box, so it no longer
+  changes with accents or descenders.
+- **The flicker is gone.** The window was being resized and re-shown on every
+  frame of the status dot's pulse, eleven times a second. `UpdateLayeredWindow`
+  already sets size and position, so that only happens when the size genuinely
+  changes now.
+- The pulse itself is slower and shallower — faster or deeper stops reading as
+  breathing and starts reading as blinking.
+
+### Tests
+
+381 -> 410.
+
 ## v1.4.1 — Visual finish
 
 ### Fixed — the recording indicator was jagged

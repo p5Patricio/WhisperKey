@@ -74,7 +74,12 @@ def render_pill(
     dot_radius: int = 4,
     dot_gap: int = 10,
 ) -> Image.Image:
-    """Devuelve la píldora como imagen RGBA con bordes suavizados."""
+    """Devuelve la píldora como imagen RGBA con bordes suavizados.
+
+    *font_size* va en PUNTOS, igual que en tkinter, y *scale* convierte a
+    píxeles. Tratarlo como píxeles achicaba la píldora un 30%: en una pantalla
+    al 125%, un punto son 1,33 píxeles.
+    """
     s = SUPERSAMPLE
     px = lambda v: int(round(v * scale * s))  # noqa: E731 - conversión local
 
@@ -82,11 +87,14 @@ def render_pill(
     medidor = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
     caja = medidor.textbbox((0, 0), text, font=fuente)
     ancho_texto = caja[2] - caja[0]
-    alto_texto = caja[3] - caja[1]
+    # Alto de LÍNEA, no de la tinta: usar la caja del texto hacía que la altura
+    # cambiara según si la palabra tenía tildes o letras con cola.
+    ascenso, descenso = fuente.getmetrics()
+    alto_linea = ascenso + descenso
 
     r = px(dot_radius)
     w = px(pad_x) * 2 + r * 2 + px(dot_gap) + ancho_texto
-    h = max(alto_texto + px(pad_y) * 2, r * 6)
+    h = max(alto_linea + px(pad_y) * 2, r * 6)
 
     img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
