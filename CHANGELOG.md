@@ -1,5 +1,19 @@
 # Changelog
 
+## v1.4.3 — The indicator sits on the taskbar again
+
+### Fixed
+
+- **The recording indicator rests just above the taskbar**, instead of floating
+  over a gap. Its position was measured against the full screen with a constant
+  48px subtracted "for the taskbar", and that constant was scaled by the display
+  DPI on top. On a 125% display with a 60px taskbar it reserved 80px, leaving
+  53px of dead air.
+- Position is now measured against the desktop **work area** that Windows
+  reports, so the indicator lands correctly whatever the taskbar's height, and
+  whichever edge it lives on — bottom, top, left or right. On a multi-monitor
+  setup it uses the work area of the monitor the indicator is on.
+
 ## v1.4.2 — Silent startup, and the indicator back to its usual size
 
 ### Fixed — no console window at startup
