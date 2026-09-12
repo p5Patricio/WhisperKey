@@ -489,3 +489,79 @@ class TestPildoraSuavizada:
         # BGRA: el opaco conserva el canal rojo, el transparente lo pierde.
         assert crudo[2] == 255 and crudo[3] == 255
         assert crudo[6] == 0 and crudo[7] == 0
+
+
+class TestPosicionContraLaBarraDeTareas:
+    """El indicador se apoya en la barra de tareas, no flota sobre un hueco.
+
+    Antes se restaba una constante de 48px «para la barra», escalada además por
+    el DPI: en una pantalla al 125% con una barra de 60px eso dejaba 53px de
+    aire. El alto de la barra cambia con el tema, la escala y la configuración,
+    así que el único dato fiable es el área de trabajo que informa Windows.
+    """
+
+    def _overlay(self, posicion: str, mock_tk: tuple):
+        return overlay.RecordingOverlay(
+            {"overlay": {"enabled": True, "position": posicion, "opacity": 1.0, "font_size": 14}}
+        )
+
+    def test_se_apoya_en_el_borde_del_area_de_trabajo(
+        self, mock_tk: tuple, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Pantalla de 2560x1440 con una barra de tareas de 60px abajo.
+        monkeypatch.setattr(overlay.pill, "work_area", lambda hwnd=None: (0, 0, 2560, 1380))
+        ov = self._overlay("bottom-right", mock_tk)
+        ov._scale = 1.0
+
+        x, y = ov._physical_position(175, 47)
+        assert y + 47 == 1380 - overlay._MARGEN_BARRA
+        assert x + 175 == 2560 - overlay._MARGEN_BORDE
+
+    def test_ignora_el_alto_de_la_pantalla_completa(
+        self, mock_tk: tuple, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Medir contra la pantalla es lo que metía la píldora bajo la barra."""
+        monkeypatch.setattr(overlay.pill, "work_area", lambda hwnd=None: (0, 0, 2560, 1380))
+        monkeypatch.setattr(overlay.pill, "screen_size_physical", lambda: (2560, 1440))
+        ov = self._overlay("bottom-right", mock_tk)
+        ov._scale = 1.0
+
+        _, y = ov._physical_position(175, 47)
+        assert y + 47 <= 1380, "la píldora no puede invadir la barra de tareas"
+
+    def test_respeta_una_barra_arriba(
+        self, mock_tk: tuple, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """La barra puede estar en cualquier borde; el área de trabajo lo dice."""
+        monkeypatch.setattr(overlay.pill, "work_area", lambda hwnd=None: (0, 60, 2560, 1440))
+        ov = self._overlay("top-right", mock_tk)
+        ov._scale = 1.0
+
+        _, y = ov._physical_position(175, 47)
+        assert y == 60 + overlay._MARGEN_BARRA
+
+    def test_respeta_una_barra_a_la_izquierda(
+        self, mock_tk: tuple, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(overlay.pill, "work_area", lambda hwnd=None: (80, 0, 2560, 1440))
+        ov = self._overlay("bottom-left", mock_tk)
+        ov._scale = 1.0
+
+        x, _ = ov._physical_position(175, 47)
+        assert x == 80 + overlay._MARGEN_BORDE
+
+    def test_sin_area_de_trabajo_cae_a_la_pantalla_completa(
+        self, mock_tk: tuple, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Fuera de Windows no hay área de trabajo; no debe romperse."""
+        monkeypatch.setattr(overlay.pill, "work_area", lambda hwnd=None: None)
+        monkeypatch.setattr(overlay.pill, "screen_size_physical", lambda: (1920, 1080))
+        ov = self._overlay("bottom-right", mock_tk)
+        ov._scale = 1.0
+
+        x, y = ov._physical_position(175, 47)
+        assert 0 < x < 1920 and 0 < y < 1080
+
+    def test_la_separacion_a_la_barra_es_menor_que_al_borde(self) -> None:
+        """Se lee como apoyado en la barra, no centrado en la esquina."""
+        assert overlay._MARGEN_BARRA < overlay._MARGEN_BORDE

@@ -64,6 +64,11 @@ _CANCELLED_AUTO_HIDE_MS = 1200
 # Margen para que arranque el thread de tkinter.
 _STARTUP_TIMEOUT_S = 3.0
 
+# Separación al borde de la pantalla y al borde de la barra de tareas. La
+# segunda es menor a propósito: el indicador se lee como apoyado en la barra.
+_MARGEN_BORDE = 20
+_MARGEN_BARRA = 10
+
 # Geometría de la píldora. El alto sale del alto de línea de la fuente más el
 # relleno; el de Pillow es más generoso que el de tkinter, así que el relleno se
 # ajustó para que la píldora conserve el tamaño que tenía con el Canvas.
@@ -273,7 +278,8 @@ class RecordingOverlay:
 
             # UpdateLayeredWindow trabaja en píxeles físicos y fija tamaño y
             # posición por su cuenta; tkinter razona en lógicos.
-            x, y = self._physical_position(imagen.width, imagen.height)
+            hwnd = pill.top_level_hwnd(self.root.winfo_id())
+            x, y = self._physical_position(imagen.width, imagen.height, hwnd)
             tamano = (
                 max(1, int(imagen.width / self._scale)),
                 max(1, int(imagen.height / self._scale)),
@@ -286,7 +292,6 @@ class RecordingOverlay:
                 self.root.update_idletasks()
                 self._shown_size = tamano
 
-            hwnd = pill.top_level_hwnd(self.root.winfo_id())
             if not pill.push_layered(hwnd, imagen, x, y):
                 self._layered = False
                 return False
@@ -296,18 +301,28 @@ class RecordingOverlay:
             self._layered = False
             return False
 
-    def _physical_position(self, w: int, h: int) -> tuple[int, int]:
-        """Esquina donde va la píldora, en píxeles físicos."""
-        sw, sh = pill.screen_size_physical()
-        if sw <= 0 or sh <= 0:  # pragma: no cover - fuera de Windows
-            return self._screen_position(w, h)
-        margen = int(round(20 * self._scale))
-        barra = int(round(48 * self._scale))
+    def _physical_position(self, w: int, h: int, hwnd: int | None = None) -> tuple[int, int]:
+        """Esquina donde va la píldora, en píxeles físicos.
+
+        Se mide contra el área de trabajo, no contra la pantalla completa: así
+        la píldora queda pegada al borde de la barra de tareas esté donde esté
+        y mida lo que mida, en vez de flotar sobre un hueco calculado a ojo.
+        """
+        area = pill.work_area(hwnd)
+        if area is None:  # pragma: no cover - fuera de Windows
+            sw, sh = pill.screen_size_physical()
+            if sw <= 0 or sh <= 0:
+                return self._screen_position(w, h)
+            area = (0, 0, sw, sh)
+
+        izq, arriba, der, abajo = area
+        margen = int(round(_MARGEN_BORDE * self._scale))
+        pegado = int(round(_MARGEN_BARRA * self._scale))
         posiciones = {
-            "bottom-right": (sw - w - margen, sh - h - margen - barra),
-            "bottom-left":  (margen,           sh - h - margen - barra),
-            "top-right":    (sw - w - margen,  margen),
-            "top-left":      (margen,          margen),
+            "bottom-right": (der - w - margen, abajo - h - pegado),
+            "bottom-left":  (izq + margen,     abajo - h - pegado),
+            "top-right":    (der - w - margen, arriba + pegado),
+            "top-left":     (izq + margen,     arriba + pegado),
         }
         return posiciones.get(self._position, posiciones["bottom-right"])
 
