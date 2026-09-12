@@ -93,3 +93,32 @@ class TestFlagDeConsola:
     @pytest.mark.skipif(sys.platform != "win32", reason="sólo aplica en Windows")
     def test_la_constante_es_la_de_windows(self) -> None:
         assert proc.CREATE_NO_WINDOW == 0x08000000
+
+
+class TestAreaDeTrabajo:
+    """work_area() es lo que evita adivinar el alto de la barra de tareas."""
+
+    def test_devuelve_un_rectangulo_coherente_en_windows(self) -> None:
+        if sys.platform != "win32":
+            pytest.skip("sólo aplica en Windows")
+        from whisperkey import pill
+
+        area = pill.work_area()
+        assert area is not None
+        izq, arriba, der, abajo = area
+        assert der > izq and abajo > arriba
+
+    def test_nunca_excede_la_pantalla(self) -> None:
+        if sys.platform != "win32":
+            pytest.skip("sólo aplica en Windows")
+        from whisperkey import pill
+
+        area = pill.work_area()
+        ancho, alto = pill.screen_size_physical()
+        assert area[2] <= ancho and area[3] <= alto
+
+    def test_fuera_de_windows_devuelve_none(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from whisperkey import pill
+
+        monkeypatch.setattr(pill.sys, "platform", "linux")
+        assert pill.work_area() is None

@@ -6,7 +6,7 @@ import capturaAjustes from './assets/app-ajustes.png';
 import capturaInicio from './assets/app-inicio.png';
 
 const REPO = 'p5Patricio/WhisperKey';
-const FALLBACK_VERSION = 'v1.4.2';
+const FALLBACK_VERSION = 'v1.4.3';
 const FALLBACK_DOWNLOAD = `https://github.com/${REPO}/releases/latest/download/WhisperKey-Setup.exe`;
 
 /* Marcas de 20px, trazo de 1.5. Sin emoji: rompen el registro tipográfico. */

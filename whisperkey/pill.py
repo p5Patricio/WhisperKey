@@ -178,6 +178,58 @@ def device_scale(logical_width: int) -> float:
         return 1.0
 
 
+def work_area(hwnd: int | None = None) -> tuple[int, int, int, int] | None:
+    """Rectángulo utilizable del escritorio, en píxeles físicos.
+
+    Es la pantalla menos la barra de tareas y cualquier otra barra acoplada.
+    Preguntárselo a Windows evita adivinar el alto de la barra: ese número
+    cambia con el tema, con la escala y con la configuración del usuario, y
+    restar una constante deja un hueco que no se corresponde con nada.
+
+    Se consulta el monitor donde está *hwnd* para que funcione con varias
+    pantallas. Devuelve None si no se puede averiguar.
+    """
+    if sys.platform != "win32":
+        return None
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        class RECT(ctypes.Structure):
+            _fields_ = [
+                ("left", wintypes.LONG), ("top", wintypes.LONG),
+                ("right", wintypes.LONG), ("bottom", wintypes.LONG),
+            ]
+
+        class MONITORINFO(ctypes.Structure):
+            _fields_ = [
+                ("cbSize", wintypes.DWORD),
+                ("rcMonitor", RECT),
+                ("rcWork", RECT),
+                ("dwFlags", wintypes.DWORD),
+            ]
+
+        u = ctypes.windll.user32
+        if hwnd:
+            MONITOR_DEFAULTTONEAREST = 2
+            mon = u.MonitorFromWindow(wintypes.HWND(hwnd), MONITOR_DEFAULTTONEAREST)
+            if mon:
+                info = MONITORINFO()
+                info.cbSize = ctypes.sizeof(MONITORINFO)
+                if u.GetMonitorInfoW(mon, ctypes.byref(info)):
+                    r = info.rcWork
+                    return (r.left, r.top, r.right, r.bottom)
+
+        # Sin ventana todavía: el área de trabajo del monitor principal.
+        SPI_GETWORKAREA = 0x0030
+        r = RECT()
+        if u.SystemParametersInfoW(SPI_GETWORKAREA, 0, ctypes.byref(r), 0):
+            return (r.left, r.top, r.right, r.bottom)
+    except Exception:  # pragma: no cover - sin API de Windows
+        pass
+    return None
+
+
 def screen_size_physical() -> tuple[int, int]:
     """Tamaño de pantalla en píxeles físicos."""
     if sys.platform != "win32":
